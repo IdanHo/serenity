@@ -1,6 +1,6 @@
 name: Build, lint, and test
 
-on: [push, pull_request]
+on: [push, pull_request, pull_request_target]
 
 env:
   # Don't mix these up!
@@ -10,6 +10,7 @@ env:
 
 jobs:
   build_and_test_serenity:
+    if: always() && (github.event_name == 'pull_request' || github.event_name == 'push')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -161,6 +162,7 @@ jobs:
       continue-on-error: true
 
   build_and_test_lagom:
+    if: always() && (github.event_name == 'pull_request' || github.event_name == 'push')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -257,22 +259,32 @@ jobs:
   notify_discord:
     needs: [build_and_test_serenity, build_and_test_lagom]
     runs-on: ubuntu-20.04
+    if: always() && github.repository == 'SerenityOS/serenity' && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/master'))
+
+    steps:
+      - name: Discord action notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        uses: Ilshidur/action-discord@0.3.0
+        if: ${{ (github.event['pull_request'] && github.event['action'] == 'opened' && !(github.event['pull_request'] == 'draft')) || github.event['commits'] }}
+
+  notify_discord_build_status:
+    needs: [build_and_test_serenity, build_and_test_lagom, notify_discord]
+    runs-on: ubuntu-20.04
     if: always() && github.repository == 'SerenityOS/serenity' && (github.event_name == 'pull_request_target' || (github.event_name == 'push' && github.ref == 'refs/heads/master'))
 
     steps:
-    # Sets environment variable env.WORKFLOW_CONCLUSION to one of [neutral, success, skipped, cancelled, timed_out, action_required, failure]
-    # depending on result of all needs jobs
-    - uses: technote-space/workflow-conclusion-action@v2
+    - name: Wait for tests to finish
+      if: always() && github.event_name == 'pull_request_target'
+      uses: IdanHo/action-wait-for-check@890bf0671eeeac09faf19f57deb4397eeccc59aa
+      id: wait-for-tests
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        excludedCheckName: "notify_discord_build_status"
+        ref: ${{ github.event.pull_request.head.sha }}
+        timeoutSeconds: 1200
 
-    # === NOTIFICATIONS ===
-
-    - name: Discord action notification
-      env:
-        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-      uses: Ilshidur/action-discord@0.3.0
-      if: ${{ (github.event['pull_request'] && github.event['action'] == 'opened' && !(github.event['pull_request'] == 'draft')) || github.event['commits'] }}
-
-    - name: Discord build result
+    - name: Discord build status
       env:
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         DISCORD_USERNAME: GitHub # we have to set these manually for non-default messages
@@ -280,4 +292,4 @@ jobs:
       uses: Ilshidur/action-discord@0.3.0
       if: ${{ (github.event['pull_request'] && github.event['action'] == 'opened' && !(github.event['pull_request'] == 'draft')) || github.event['commits'] }}
       with:
-        args: "The build ${{ env.WORKFLOW_CONCLUSION == 'success' && 'passed :white_check_mark:' || 'failed :x:' }}"
+        args: "The build ${{ steps.wait-for-tests.outputs.conclusion == 'success' && 'passed :white_check_mark:' || 'failed :x:' }}"

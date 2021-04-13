@@ -5,7 +5,8 @@ on: [push, pull_request_target]
 jobs:
   notify_discord:
     runs-on: ubuntu-20.04
-    if: always() && github.repository == 'SerenityOS/serenity' && (github.event_name == 'pull_request_target' || (github.event_name == 'push' && github.ref == 'refs/heads/master'))
+    if: always() && (github.event_name == 'pull_request_target' || (github.event_name == 'push'))
+    #if: always() && github.repository == 'SerenityOS/serenity' && (github.event_name == 'pull_request_target' || (github.event_name == 'push' && github.ref == 'refs/heads/master'))
 
     steps:
       - name: Wait for tests to finish
@@ -15,7 +16,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           excludedCheckName: "notify_discord"
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          timeoutSeconds: 1200
+          timeoutSeconds: 100
 
       - name: Discord action notification
         env:

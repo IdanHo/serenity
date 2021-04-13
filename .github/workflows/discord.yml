@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-20.04
     if: always() && (github.event_name == 'pull_request_target' || (github.event_name == 'push'))
     #if: always() && github.repository == 'SerenityOS/serenity' && (github.event_name == 'pull_request_target' || (github.event_name == 'push' && github.ref == 'refs/heads/master'))
-    #extra
+    #second extra
 
     steps:
       - name: Wait for tests to finish

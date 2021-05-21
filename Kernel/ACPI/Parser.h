@@ -17,22 +17,21 @@
 namespace Kernel {
 namespace ACPI {
 
-class Parser {
+class Parser final {
 public:
     static Parser* the();
 
-    template<typename ParserType>
     static void initialize(PhysicalAddress rsdp)
     {
-        set_the(*new ParserType(rsdp));
+        set_the(*new Parser(rsdp));
     }
 
-    virtual PhysicalAddress find_table(const StringView& signature);
+    PhysicalAddress find_table(const StringView& signature);
 
-    virtual void try_acpi_reboot();
-    virtual bool can_reboot();
-    virtual void try_acpi_shutdown();
-    virtual bool can_shutdown() { return false; }
+    void try_acpi_reboot();
+    bool can_reboot();
+    void try_acpi_shutdown();
+    bool can_shutdown() { return false; }
 
     virtual bool have_8042() const
     {
@@ -42,16 +41,10 @@ public:
     const FADTFlags::HardwareFeatures& hardware_features() const { return m_hardware_flags; }
     const FADTFlags::x86_Specific_Flags& x86_specific_flags() const { return m_x86_specific_flags; }
 
-    virtual void enable_aml_interpretation();
-    virtual void enable_aml_interpretation(File&);
-    virtual void enable_aml_interpretation(u8*, u32);
-    virtual void disable_aml_interpretation();
-
-protected:
+private:
     explicit Parser(PhysicalAddress rsdp);
     virtual ~Parser() = default;
 
-private:
     static void set_the(Parser&);
 
     void locate_static_data();

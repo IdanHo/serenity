@@ -318,7 +318,6 @@ struct [[gnu::packed]] MCFG {
 }
 
 class StaticParser;
-class DynamicParser;
 class Parser;
 
 namespace StaticParsing {

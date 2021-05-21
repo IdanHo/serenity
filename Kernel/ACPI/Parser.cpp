@@ -10,6 +10,7 @@
 #include <Kernel/ACPI/Parser.h>
 #include <Kernel/Arch/PC/BIOS.h>
 #include <Kernel/Arch/x86/InterruptDisabler.h>
+#include <Kernel/CommandLine.h>
 #include <Kernel/Debug.h>
 #include <Kernel/IO.h>
 #include <Kernel/PCI/Access.h>
@@ -288,6 +289,12 @@ UNMAP_AFTER_INIT Parser::Parser(PhysicalAddress rsdp)
 {
     dmesgln("ACPI: Using RSDP @ {}", rsdp);
     locate_static_data();
+
+    auto feature_level = kernel_command_line().acpi_feature_level();
+    VERIFY(feature_level != AcpiFeatureLevel::Disabled);
+    if (feature_level == AcpiFeatureLevel::Limited)
+        return;
+    // FIXME: DSDT AML Parsing
 }
 
 static bool validate_table(const Structures::SDTHeader& v_header, size_t length)
@@ -364,26 +371,6 @@ UNMAP_AFTER_INIT static PhysicalAddress search_table_in_rsdt(PhysicalAddress rsd
             return PhysicalAddress((FlatPtr)rsdt->table_ptrs[i]);
     }
     return {};
-}
-
-void Parser::enable_aml_interpretation()
-{
-    VERIFY_NOT_REACHED();
-}
-
-void Parser::enable_aml_interpretation(File&)
-{
-    VERIFY_NOT_REACHED();
-}
-
-void Parser::enable_aml_interpretation(u8*, u32)
-{
-    VERIFY_NOT_REACHED();
-}
-
-void Parser::disable_aml_interpretation()
-{
-    VERIFY_NOT_REACHED();
 }
 
 }

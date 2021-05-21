@@ -355,8 +355,8 @@ static bool match_table_signature(PhysicalAddress table_header, const StringView
     // FIXME: There's no validation of ACPI tables here. Use the checksum to validate the tables.
     VERIFY(signature.length() == 4);
 
-    auto table = map_typed<Structures::RSDT>(table_header);
-    return !strncmp(table->h.sig, signature.characters_without_null_termination(), 4);
+    auto table = map_typed<Structures::SDTHeader>(table_header);
+    return !strncmp(table->sig, signature.characters_without_null_termination(), 4);
 }
 
 UNMAP_AFTER_INIT static PhysicalAddress search_table_in_rsdt(PhysicalAddress rsdt_address, const StringView& signature)

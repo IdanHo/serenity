@@ -44,7 +44,6 @@ UNMAP_AFTER_INIT void Parser::locate_static_data()
     locate_main_system_description_table();
     initialize_main_system_description_table();
     init_fadt();
-    init_facs();
 }
 
 UNMAP_AFTER_INIT PhysicalAddress Parser::find_table(const StringView& signature)
@@ -59,11 +58,6 @@ UNMAP_AFTER_INIT PhysicalAddress Parser::find_table(const StringView& signature)
         }
     }
     return {};
-}
-
-UNMAP_AFTER_INIT void Parser::init_facs()
-{
-    m_facs = find_table("FACS");
 }
 
 UNMAP_AFTER_INIT void Parser::init_fadt()
@@ -82,6 +76,18 @@ UNMAP_AFTER_INIT void Parser::init_fadt()
     auto* header = &sdt.ptr()->h;
     dmesgln("ACPI: Fixed ACPI data, Revision {}, length: {} bytes", (size_t)header->revision, (size_t)header->length);
     dmesgln("ACPI: DSDT {}", PhysicalAddress(sdt->dsdt_ptr));
+
+    if (sdt->h.revision >= 2 && sdt->x_firmware_ctrl != 0)
+        m_facs = PhysicalAddress(sdt->x_firmware_ctrl);
+    else if (sdt->firmware_ctrl != 0)
+        m_facs = PhysicalAddress(sdt->firmware_ctrl);
+    else if (sdt->flags & (u32)FADTFlags::FeatureFlags::HW_REDUCED_ACPI)
+        dmesgln("ACPI: FACS unavailable");
+    else
+        VERIFY_NOT_REACHED();
+    if (!m_facs.is_null())
+        dmesgln("ACPI: FACS {}", m_facs);
+
     m_x86_specific_flags.cmos_rtc_not_present = (sdt->ia_pc_boot_arch_flags & (u8)FADTFlags::IA_PC_Flags::CMOS_RTC_Not_Present);
 
     // FIXME: QEMU doesn't report that we have an i8042 controller in these flags, even if it should (when FADT revision is 3),

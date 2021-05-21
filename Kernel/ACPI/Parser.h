@@ -53,7 +53,6 @@ private:
     size_t get_table_size(PhysicalAddress);
     u8 get_table_revision(PhysicalAddress);
     void init_fadt();
-    void init_facs();
 
     bool validate_reset_register();
     void access_generic_address(const Structures::GenericAddressStructure&, u32 value);

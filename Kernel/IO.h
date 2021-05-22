@@ -91,6 +91,20 @@ public:
         VERIFY_NOT_REACHED();
     }
 
+    inline u32 in(u8 bit_width)
+    {
+        if (bit_width == 32) {
+            return IO::in32(get());
+        }
+        if (bit_width == 16) {
+            return IO::in16(get());
+        }
+        if (bit_width == 8) {
+            return IO::in8(get());
+        }
+        VERIFY_NOT_REACHED();
+    }
+
     template<typename T>
     ALWAYS_INLINE void out(T value)
     {

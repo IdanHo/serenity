@@ -141,3 +141,5 @@ Discord: [SerenityOS Discord](https://discord.com/invite/29gCcKsXkF)
 SerenityOS is licensed under a 2-clause BSD license.
 
 test
+
+bad change

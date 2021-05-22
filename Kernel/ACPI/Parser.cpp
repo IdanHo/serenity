@@ -130,23 +130,22 @@ bool Parser::can_reboot()
     return m_hardware_flags.reset_register_supported;
 }
 
-void Parser::access_generic_address(const Structures::GenericAddressStructure& structure, u32 value)
+void Parser::generic_address_write(const Structures::GenericAddressStructure& structure, u32 value)
 {
     switch ((GenericAddressStructure::AddressSpace)structure.address_space) {
     case GenericAddressStructure::AddressSpace::SystemIO: {
         IOAddress address(structure.address);
-        dbgln("ACPI: Sending value {:x} to {}", value, address);
+        dbgln_if(ACPI_DEBUG, "ACPI: Sending value {:x} to {}", value, address);
         switch (structure.access_size) {
         case (u8)GenericAddressStructure::AccessSize::QWord: {
             dbgln("Trying to send QWord to IO port");
             VERIFY_NOT_REACHED();
-            break;
         }
         case (u8)GenericAddressStructure::AccessSize::Undefined: {
-            dbgln("ACPI Warning: Unknown access size {}", structure.access_size);
+            dbgln_if(ACPI_DEBUG, "ACPI Warning: Unknown access size {}", structure.access_size);
             VERIFY(structure.bit_width != (u8)GenericAddressStructure::BitWidth::QWord);
             VERIFY(structure.bit_width != (u8)GenericAddressStructure::BitWidth::Undefined);
-            dbgln("ACPI: Bit Width - {} bits", structure.bit_width);
+            dbgln_if(ACPI_DEBUG, "ACPI: Bit Width - {} bits", structure.bit_width);
             address.out(value, structure.bit_width);
             break;
         }
@@ -157,7 +156,7 @@ void Parser::access_generic_address(const Structures::GenericAddressStructure& s
         return;
     }
     case GenericAddressStructure::AddressSpace::SystemMemory: {
-        dbgln("ACPI: Sending value {:x} to {}", value, PhysicalAddress(structure.address));
+        dbgln_if(ACPI_DEBUG, "ACPI: Sending value {:x} to {}", value, PhysicalAddress(structure.address));
         switch ((GenericAddressStructure::AccessSize)structure.access_size) {
         case GenericAddressStructure::AccessSize::Byte:
             *map_typed<u8>(PhysicalAddress(structure.address)) = value;
@@ -181,7 +180,7 @@ void Parser::access_generic_address(const Structures::GenericAddressStructure& s
         // According to https://uefi.org/specs/ACPI/6.4/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#address-space-format,
         // PCI addresses must be confined to devices on Segment group 0, bus 0.
         auto pci_address = PCI::Address(0, 0, ((structure.address >> 24) & 0xFF), ((structure.address >> 16) & 0xFF));
-        dbgln("ACPI: Sending value {:x} to {}", value, pci_address);
+        dbgln_if(ACPI_DEBUG, "ACPI: Sending value {:x} to {}", value, pci_address);
         u32 offset_in_pci_address = structure.address & 0xFFFF;
         if (structure.access_size == (u8)GenericAddressStructure::AccessSize::QWord) {
             dbgln("Trying to send QWord to PCI configuration space");
@@ -190,6 +189,62 @@ void Parser::access_generic_address(const Structures::GenericAddressStructure& s
         VERIFY(structure.access_size != (u8)GenericAddressStructure::AccessSize::Undefined);
         PCI::raw_write(pci_address, offset_in_pci_address, (1 << (structure.access_size - 1)), value);
         return;
+    }
+    default:
+        VERIFY_NOT_REACHED();
+    }
+    VERIFY_NOT_REACHED();
+}
+
+u32 Parser::generic_address_read(const Structures::GenericAddressStructure& structure)
+{
+    switch ((GenericAddressStructure::AddressSpace)structure.address_space) {
+    case GenericAddressStructure::AddressSpace::SystemIO: {
+        IOAddress address(structure.address);
+        dbgln_if(ACPI_DEBUG, "ACPI: Reading from {}", address);
+        switch (structure.access_size) {
+        case (u8)GenericAddressStructure::AccessSize::QWord: {
+            dbgln("Trying to read QWord from IO port");
+            VERIFY_NOT_REACHED();
+        }
+        case (u8)GenericAddressStructure::AccessSize::Undefined: {
+            dbgln_if(ACPI_DEBUG, "ACPI Warning: Unknown access size {}", structure.access_size);
+            VERIFY(structure.bit_width != (u8)GenericAddressStructure::BitWidth::QWord);
+            VERIFY(structure.bit_width != (u8)GenericAddressStructure::BitWidth::Undefined);
+            dbgln_if(ACPI_DEBUG, "ACPI: Bit Width - {} bits", structure.bit_width);
+            return address.in(structure.bit_width);
+        }
+        default:
+            return address.in((8 << (structure.access_size - 1)));
+        }
+    }
+    case GenericAddressStructure::AddressSpace::SystemMemory: {
+        dbgln_if(ACPI_DEBUG, "ACPI: Reading from {}", PhysicalAddress(structure.address));
+        switch ((GenericAddressStructure::AccessSize)structure.access_size) {
+        case GenericAddressStructure::AccessSize::Byte:
+            return *map_typed<u8>(PhysicalAddress(structure.address));
+        case GenericAddressStructure::AccessSize::Word:
+            return *map_typed<u16>(PhysicalAddress(structure.address));
+        case GenericAddressStructure::AccessSize::DWord:
+            return *map_typed<u32>(PhysicalAddress(structure.address));
+        case GenericAddressStructure::AccessSize::QWord: {
+            return *map_typed<u64>(PhysicalAddress(structure.address));
+        }
+        default:
+            VERIFY_NOT_REACHED();
+        }
+    }
+    case GenericAddressStructure::AddressSpace::PCIConfigurationSpace: {
+        // According to the ACPI specification 6.2, page 168, PCI addresses must be confined to devices on Segment group 0, bus 0.
+        auto pci_address = PCI::Address(0, 0, ((structure.address >> 24) & 0xFF), ((structure.address >> 16) & 0xFF));
+        dbgln_if(ACPI_DEBUG, "ACPI: Reading from {}", pci_address);
+        u32 offset_in_pci_address = structure.address & 0xFFFF;
+        if (structure.access_size == (u8)GenericAddressStructure::AccessSize::QWord) {
+            dbgln("Trying to read QWord from PCI configuration space");
+            VERIFY_NOT_REACHED();
+        }
+        VERIFY(structure.access_size != (u8)GenericAddressStructure::AccessSize::Undefined);
+        return PCI::raw_read(pci_address, offset_in_pci_address, (1 << (structure.access_size - 1)));
     }
     default:
         VERIFY_NOT_REACHED();
@@ -216,7 +271,7 @@ void Parser::try_acpi_reboot()
 
     auto fadt = map_typed<Structures::FADT>(m_fadt);
     VERIFY(validate_reset_register());
-    access_generic_address(fadt->reset_reg, fadt->reset_value);
+    generic_address_write(fadt->reset_reg, fadt->reset_value);
     Processor::halt();
 }
 

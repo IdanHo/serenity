@@ -55,7 +55,8 @@ private:
     void init_fadt();
 
     bool validate_reset_register();
-    void access_generic_address(const Structures::GenericAddressStructure&, u32 value);
+    void generic_address_write(const Structures::GenericAddressStructure& structure, u32 value);
+    u32 generic_address_read(const Structures::GenericAddressStructure& structure);
 
     PhysicalAddress m_rsdp;
     PhysicalAddress m_main_system_description_table;

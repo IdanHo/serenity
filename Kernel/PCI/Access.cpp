@@ -167,7 +167,7 @@ UNMAP_AFTER_INIT Vector<Capability> get_capabilities(Address address)
     return capabilities;
 }
 
-void raw_access(Address address, u32 field, size_t access_size, u32 value)
+void raw_write(Address address, u32 field, size_t access_size, u32 value)
 {
     VERIFY(access_size != 0);
     if (access_size == 1) {
@@ -181,6 +181,21 @@ void raw_access(Address address, u32 field, size_t access_size, u32 value)
     if (access_size == 4) {
         write32(address, field, value);
         return;
+    }
+    VERIFY_NOT_REACHED();
+}
+
+u32 raw_read(Address address, u32 field, size_t access_size)
+{
+    VERIFY(access_size != 0);
+    if (access_size == 1) {
+        return read8(address, field);
+    }
+    if (access_size == 2) {
+        return read16(address, field);
+    }
+    if (access_size == 4) {
+        return read32(address, field);
     }
     VERIFY_NOT_REACHED();
 }

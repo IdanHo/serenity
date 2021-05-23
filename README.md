@@ -143,3 +143,5 @@ SerenityOS is licensed under a 2-clause BSD license.
 test
 
 bad change
+
+bad change 2

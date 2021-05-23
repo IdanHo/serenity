@@ -418,7 +418,7 @@ private:
 
 class Stack {
 public:
-    using EntryType = Variant<NonnullOwnPtr<Value>, NonnullOwnPtr<Label>, NonnullOwnPtr<Frame>>;
+    using EntryType = Variant<Value, Label, NonnullOwnPtr<Frame>>;
     Stack() = default;
 
     [[nodiscard]] bool is_empty() const { return m_data.is_empty(); }

@@ -1,6 +1,6 @@
 name: UBSAN build tests
 
-on: [push]
+on: [push, pull_request]
 
 env:
   # Don't mix these up!

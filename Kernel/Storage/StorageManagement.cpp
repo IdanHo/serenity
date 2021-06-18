@@ -24,7 +24,7 @@ static StorageManagement* s_the;
 static size_t s_device_minor_number;
 
 UNMAP_AFTER_INIT StorageManagement::StorageManagement(String boot_argument, bool force_pio)
-    : m_boot_argument(boot_argument)
+    : m_boot_argument(move(boot_argument))
     , m_controllers(enumerate_controllers(force_pio))
     , m_storage_devices(enumerate_storage_devices())
     , m_disk_partitions(enumerate_disk_partitions())
@@ -78,7 +78,7 @@ UNMAP_AFTER_INIT NonnullRefPtrVector<StorageDevice> StorageManagement::enumerate
     return devices;
 }
 
-UNMAP_AFTER_INIT OwnPtr<PartitionTable> StorageManagement::try_to_initialize_partition_table(const StorageDevice& device) const
+UNMAP_AFTER_INIT OwnPtr<PartitionTable> StorageManagement::try_to_initialize_partition_table(const StorageDevice& device)
 {
     auto mbr_table_or_result = MBRPartitionTable::try_to_initialize(device);
     if (!mbr_table_or_result.is_error())
@@ -136,8 +136,16 @@ UNMAP_AFTER_INIT void StorageManagement::determine_boot_device()
         });
     }
 
-    if (m_boot_block_device.is_null()) {
-        PANIC("StorageManagement: boot device {} not found", m_boot_argument);
+    if (m_boot_block_device)
+        return;
+
+    // We couldn't find the device specified by the boot argument, since we have a default value for the boot argument
+    // it might just be incorrect, so as a last resort lets just use any bootable partition if any is available
+    for (auto& partition : m_disk_partitions) {
+        if (partition.metadata().bootable()) {
+            m_boot_block_device = partition;
+            break;
+        }
     }
 }
 
@@ -197,7 +205,7 @@ bool StorageManagement::initialized()
 UNMAP_AFTER_INIT void StorageManagement::initialize(String root_device, bool force_pio)
 {
     VERIFY(!StorageManagement::initialized());
-    s_the = new StorageManagement(root_device, force_pio);
+    s_the = new StorageManagement(move(root_device), force_pio);
 }
 
 StorageManagement& StorageManagement::the()

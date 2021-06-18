@@ -37,29 +37,30 @@ bool DiskPartitionMetadata::PartitionType::is_valid() const
     return !all_of(m_partition_type.begin(), m_partition_type.end(), [](const auto octet) { return octet == 0; });
 }
 
-DiskPartitionMetadata::DiskPartitionMetadata(u64 start_block, u64 end_block, u8 partition_type)
+DiskPartitionMetadata::DiskPartitionMetadata(u64 start_block, u64 end_block, u8 partition_type, bool bootable)
     : m_start_block(start_block)
     , m_end_block(end_block)
     , m_type(partition_type)
+    , m_bootable(bootable)
 {
     VERIFY(m_type.is_valid());
 }
 
-DiskPartitionMetadata::DiskPartitionMetadata(u64 start_block, u64 end_block, Array<u8, 16> partition_type)
+DiskPartitionMetadata::DiskPartitionMetadata(u64 start_block, u64 end_block, Array<u8, 16> partition_type, bool bootable)
     : m_start_block(start_block)
     , m_end_block(end_block)
     , m_type(partition_type)
+    , m_bootable(bootable)
 {
     VERIFY(m_type.is_valid());
 }
 
-DiskPartitionMetadata::DiskPartitionMetadata(u64 start_block, u64 end_block, Array<u8, 16> partition_type, UUID unique_guid, u64 special_attributes, String name)
+DiskPartitionMetadata::DiskPartitionMetadata(u64 start_block, u64 end_block, Array<u8, 16> partition_type, UUID unique_guid, bool bootable)
     : m_start_block(start_block)
     , m_end_block(end_block)
     , m_type(partition_type)
     , m_unique_guid(unique_guid)
-    , m_attributes(special_attributes)
-    , m_name(name)
+    , m_bootable(bootable)
 {
     VERIFY(m_type.is_valid());
     VERIFY(!m_unique_guid.is_zero());
@@ -67,33 +68,24 @@ DiskPartitionMetadata::DiskPartitionMetadata(u64 start_block, u64 end_block, Arr
 
 DiskPartitionMetadata DiskPartitionMetadata::offset(u64 blocks_count) const
 {
-    return { blocks_count + m_start_block, blocks_count + m_end_block, m_type.m_partition_type };
+    return { blocks_count + m_start_block, blocks_count + m_end_block, m_type.m_partition_type, m_bootable };
 }
 
 u64 DiskPartitionMetadata::start_block() const
 {
     return m_start_block;
 }
+
 u64 DiskPartitionMetadata::end_block() const
 {
     return m_end_block;
 }
-Optional<u64> DiskPartitionMetadata::special_attributes() const
-{
-    if (m_attributes == 0)
-        return {};
-    return m_attributes;
-}
-Optional<String> DiskPartitionMetadata::name() const
-{
-    if (m_name.is_null() || m_name.is_empty())
-        return {};
-    return m_name;
-}
+
 const DiskPartitionMetadata::PartitionType& DiskPartitionMetadata::type() const
 {
     return m_type;
 }
+
 const UUID& DiskPartitionMetadata::unique_guid() const
 {
     return m_unique_guid;

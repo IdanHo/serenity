@@ -64,7 +64,7 @@ EBRPartitionTable::EBRPartitionTable(const StorageDevice& device)
         if (entry.offset == 0x00) {
             continue;
         }
-        m_partitions.empend(entry.offset, (entry.offset + entry.length), entry.type);
+        m_partitions.empend(entry.offset, (entry.offset + entry.length), entry.type, (entry.status & 0x80) != 0);
     }
 }
 

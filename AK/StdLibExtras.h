@@ -82,10 +82,9 @@ constexpr T clamp(const T& value, const IdentityType<T>& min, const IdentityType
 }
 
 template<typename T, typename U>
-constexpr T ceil_div(T a, U b)
+constexpr auto ceil_div(T a, U b)
 {
-    static_assert(sizeof(T) == sizeof(U));
-    T result = a / b;
+    auto result = a / b;
     if ((a % b) != 0)
         ++result;
     return result;

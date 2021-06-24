@@ -24,7 +24,7 @@ KResultOr<int> Process::do_statvfs(String path, statvfs* buf)
     statvfs kernelbuf = {};
 
     kernelbuf.f_bsize = static_cast<u64>(fs.block_size());
-    kernelbuf.f_frsize = fs.fragment_size();
+    kernelbuf.f_frsize = fs.fragment_size() ?: kernelbuf.f_bsize;
     kernelbuf.f_blocks = fs.total_block_count();
     kernelbuf.f_bfree = fs.free_block_count();
 

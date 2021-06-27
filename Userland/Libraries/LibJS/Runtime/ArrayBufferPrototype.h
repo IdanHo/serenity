@@ -20,7 +20,11 @@ public:
 
 private:
     JS_DECLARE_NATIVE_FUNCTION(slice);
+    JS_DECLARE_NATIVE_FUNCTION(resize);
+    JS_DECLARE_NATIVE_FUNCTION(transfer);
     JS_DECLARE_NATIVE_GETTER(byte_length_getter);
+    JS_DECLARE_NATIVE_GETTER(max_byte_length_getter);
+    JS_DECLARE_NATIVE_GETTER(resizable_getter);
 };
 
 }

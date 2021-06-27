@@ -7,6 +7,7 @@
 #pragma once
 
 #define JS_ENUMERATE_ERROR_TYPES(M)                                                                                                     \
+    M(ArrayBufferInvalidByteLength, "Byte length must be less than or equal to the max byte length")                                    \
     M(ArrayMaxSize, "Maximum array size exceeded")                                                                                      \
     M(ArrayPrototypeOneArg, "Array.prototype.{}() requires at least one argument")                                                      \
     M(AccessorBadField, "Accessor descriptor's '{}' field must be a function or undefined")                                             \

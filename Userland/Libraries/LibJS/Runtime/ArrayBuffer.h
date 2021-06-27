@@ -20,14 +20,19 @@ class ArrayBuffer : public Object {
     JS_OBJECT(ArrayBuffer, Object);
 
 public:
-    static ArrayBuffer* create(GlobalObject&, size_t);
+    static ArrayBuffer* create(GlobalObject&, size_t byte_length, Optional<size_t> max_byte_length);
     static ArrayBuffer* create(GlobalObject&, ByteBuffer*);
 
-    ArrayBuffer(size_t, Object& prototype);
+    ArrayBuffer(size_t byte_length, Optional<size_t> max_byte_length, Object& prototype);
     ArrayBuffer(ByteBuffer* buffer, Object& prototype);
     virtual ~ArrayBuffer() override;
 
     size_t byte_length() const { return buffer_impl().size(); }
+
+    // 1.1.5 IsResizableArrayBuffer ( arrayBuffer ), https://tc39.es/proposal-resizablearraybuffer/#sec-isresizablearraybuffer
+    bool is_resizable() const { return m_max_byte_length.has_value(); }
+    size_t max_byte_length() const { return *m_max_byte_length; }
+
     ByteBuffer& buffer() { return buffer_impl(); }
     const ByteBuffer& buffer() const { return buffer_impl(); }
 
@@ -62,6 +67,8 @@ private:
     // The various detach related members of ArrayBuffer are not used by any ECMA262 functionality,
     // but are required to be available for the use of various harnesses like the Test262 test runner.
     Value m_detach_key;
+
+    Optional<size_t> m_max_byte_length;
 };
 
 // 25.1.2.9 RawBytesToNumeric ( type, rawBytes, isLittleEndian ), https://tc39.es/ecma262/#sec-rawbytestonumeric

@@ -48,18 +48,40 @@ Value ArrayBufferConstructor::call()
 }
 
 // 25.1.2.1 AllocateArrayBuffer ( constructor, byteLength ), https://tc39.es/ecma262/#sec-allocatearraybuffer
-ArrayBuffer* allocate_array_buffer(GlobalObject& global_object, FunctionObject& constructor, size_t byte_length)
+// 1.1.2 AllocateArrayBuffer ( constructor, byteLength[ , maxByteLength ] ), https://tc39.es/proposal-resizablearraybuffer/#sec-allocatearraybuffer
+ArrayBuffer* allocate_array_buffer(GlobalObject& global_object, FunctionObject& constructor, size_t byte_length, Optional<size_t> max_byte_length)
 {
     auto& vm = global_object.vm();
 
-    auto* obj = ordinary_create_from_constructor<ArrayBuffer>(global_object, constructor, &GlobalObject::array_buffer_prototype, byte_length);
+    auto* obj = ordinary_create_from_constructor<ArrayBuffer>(global_object, constructor, &GlobalObject::array_buffer_prototype, byte_length, move(max_byte_length));
     if (vm.exception())
         return {};
 
     return obj;
 }
 
+// 1.1.6 GetArrayBufferMaxByteLengthOption ( options ), https://tc39.es/proposal-resizablearraybuffer/#sec-getarraybuffermaxbytelengthoption
+static Optional<size_t> get_array_buffer_max_byte_length_option(GlobalObject& global_object, Value options)
+{
+    auto& vm = global_object.vm();
+
+    if (!options.is_object())
+        return {};
+
+    auto max_byte_length_value = options.as_object().get(vm.names.maxByteLength).value_or(js_undefined());
+    if (vm.exception())
+        return {};
+    if (max_byte_length_value.is_undefined())
+        return {};
+
+    auto max_byte_length = max_byte_length_value.to_index(global_object);
+    if (vm.exception())
+        return {};
+    return max_byte_length;
+}
+
 // 25.1.3.1 ArrayBuffer ( length ), https://tc39.es/ecma262/#sec-arraybuffer-length
+// 1.2.1 ArrayBuffer ( length [ , options ] ), https://tc39.es/proposal-resizablearraybuffer/#sec-arraybuffer-length
 Value ArrayBufferConstructor::construct(FunctionObject& new_target)
 {
     auto& vm = this->vm();
@@ -72,7 +94,14 @@ Value ArrayBufferConstructor::construct(FunctionObject& new_target)
         }
         return {};
     }
-    return allocate_array_buffer(global_object(), new_target, byte_length);
+    auto requested_max_byte_length = get_array_buffer_max_byte_length_option(global_object(), vm.argument(1));
+    if (vm.exception())
+        return {};
+    if (requested_max_byte_length.has_value() && byte_length > *requested_max_byte_length) {
+        vm.throw_exception<RangeError>(global_object(), ErrorType::ArrayBufferInvalidByteLength);
+        return {};
+    }
+    return allocate_array_buffer(global_object(), new_target, byte_length, requested_max_byte_length);
 }
 
 // 25.1.4.1 ArrayBuffer.isView ( arg ), https://tc39.es/ecma262/#sec-arraybuffer.isview

@@ -212,6 +212,7 @@ namespace JS {
     P(log10)                                 \
     P(map)                                   \
     P(max)                                   \
+    P(maxByteLength)                         \
     P(message)                               \
     P(min)                                   \
     P(multiline)                             \
@@ -239,6 +240,8 @@ namespace JS {
     P(reduceRight)                           \
     P(reject)                                \
     P(repeat)                                \
+    P(resizable)                             \
+    P(resize)                                \
     P(resolve)                               \
     P(reverse)                               \
     P(revocable)                             \
@@ -311,6 +314,7 @@ namespace JS {
     P(toUpperCase)                           \
     P(toUTCString)                           \
     P(trace)                                 \
+    P(transfer)                              \
     P(trim)                                  \
     P(trimEnd)                               \
     P(trimLeft)                              \

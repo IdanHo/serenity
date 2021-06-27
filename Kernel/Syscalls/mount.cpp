@@ -8,6 +8,7 @@
 #include <Kernel/FileSystem/DevFS.h>
 #include <Kernel/FileSystem/DevPtsFS.h>
 #include <Kernel/FileSystem/Ext2FileSystem.h>
+#include <Kernel/FileSystem/FATFileSystem.h>
 #include <Kernel/FileSystem/Plan9FileSystem.h>
 #include <Kernel/FileSystem/ProcFS.h>
 #include <Kernel/FileSystem/TmpFS.h>
@@ -78,6 +79,17 @@ KResultOr<int> Process::sys$mount(Userspace<const Syscall::SC_mount_params*> use
         dbgln("mount: attempting to mount {} on {}", description->absolute_path(), target);
 
         fs = Ext2FS::create(*description);
+    } else if (fs_type == "fat" || fs_type == "fat12" || fs_type == "fat16" || fs_type == "fat32" || fs_type == "FATFS") {
+        if (description.is_null())
+            return EBADF;
+        //if (!description->file().is_block_device())
+        //    return ENOTBLK;
+        if (!description->file().is_seekable()) {
+            dbgln("mount: this is not a seekable file");
+            return ENODEV;
+        }
+
+        fs = FATFS::create(*description);
     } else if (fs_type == "9p" || fs_type == "Plan9FS") {
         if (description.is_null())
             return EBADF;

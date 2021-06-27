@@ -97,6 +97,7 @@ set(KERNEL_SOURCES
     FileSystem/DevFS.cpp
     FileSystem/DevPtsFS.cpp
     FileSystem/Ext2FileSystem.cpp
+    FileSystem/FATFileSystem.cpp
     FileSystem/FIFO.cpp
     FileSystem/File.cpp
     FileSystem/FileBackedFileSystem.cpp

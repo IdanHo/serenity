@@ -8,6 +8,7 @@
 #include <AK/Checked.h>
 #include <LibJS/Runtime/AbstractOperations.h>
 #include <LibJS/Runtime/ArrayBuffer.h>
+#include <LibJS/Runtime/ArrayBufferConstructor.h>
 #include <LibJS/Runtime/GlobalObject.h>
 #include <LibJS/Runtime/IteratorOperations.h>
 #include <LibJS/Runtime/TypedArray.h>
@@ -103,7 +104,7 @@ static void initialize_typed_array_from_typed_array(GlobalObject& global_object,
         return;
     }
 
-    auto data = ArrayBuffer::create(global_object, byte_length.value());
+    auto data = allocate_array_buffer(global_object, *global_object.array_buffer_constructor(), byte_length.value());
 
     if (src_data->is_detached()) {
         vm.throw_exception<TypeError>(global_object, ErrorType::DetachedArrayBuffer);
@@ -152,7 +153,7 @@ static void initialize_typed_array_from_array_like(GlobalObject& global_object, 
         return;
     }
     auto byte_length = element_size * length;
-    auto array_buffer = ArrayBuffer::create(global_object, byte_length);
+    auto array_buffer = allocate_array_buffer(global_object, *global_object.array_buffer_constructor(), byte_length);
     typed_array.set_viewed_array_buffer(array_buffer);
     typed_array.set_byte_length(byte_length);
     typed_array.set_byte_offset(0);
@@ -178,7 +179,7 @@ static void initialize_typed_array_from_list(GlobalObject& global_object, TypedA
         return;
     }
     auto byte_length = element_size * list.size();
-    auto array_buffer = ArrayBuffer::create(global_object, byte_length);
+    auto array_buffer = allocate_array_buffer(global_object, *global_object.array_buffer_constructor(), byte_length);
     typed_array.set_viewed_array_buffer(array_buffer);
     typed_array.set_byte_length(byte_length);
     typed_array.set_byte_offset(0);

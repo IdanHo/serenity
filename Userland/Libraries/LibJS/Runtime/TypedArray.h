@@ -7,6 +7,7 @@
 #pragma once
 
 #include <LibJS/Runtime/ArrayBuffer.h>
+#include <LibJS/Runtime/ArrayBufferConstructor.h>
 #include <LibJS/Runtime/GlobalObject.h>
 #include <LibJS/Runtime/TypedArrayConstructor.h>
 #include <LibJS/Runtime/VM.h>
@@ -143,7 +144,7 @@ protected:
         : TypedArrayBase(prototype)
     {
         VERIFY(!Checked<u32>::multiplication_would_overflow(array_length, sizeof(UnderlyingBufferDataType)));
-        m_viewed_array_buffer = ArrayBuffer::create(global_object(), array_length * sizeof(UnderlyingBufferDataType));
+        m_viewed_array_buffer = allocate_array_buffer(global_object(), *global_object().array_buffer_constructor(), array_length * sizeof(UnderlyingBufferDataType));
         if (array_length)
             VERIFY(!data().is_null());
         m_array_length = array_length;

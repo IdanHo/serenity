@@ -29,4 +29,6 @@ private:
     JS_DECLARE_NATIVE_GETTER(symbol_species_getter);
 };
 
+ArrayBuffer* allocate_array_buffer(GlobalObject& global_object, FunctionObject& constructor, size_t byte_length);
+
 }

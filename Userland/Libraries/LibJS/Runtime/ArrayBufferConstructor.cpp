@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <LibJS/Runtime/AbstractOperations.h>
 #include <LibJS/Runtime/ArrayBuffer.h>
 #include <LibJS/Runtime/ArrayBufferConstructor.h>
 #include <LibJS/Runtime/Error.h>
@@ -46,8 +47,20 @@ Value ArrayBufferConstructor::call()
     return {};
 }
 
+// 25.1.2.1 AllocateArrayBuffer ( constructor, byteLength ), https://tc39.es/ecma262/#sec-allocatearraybuffer
+ArrayBuffer* allocate_array_buffer(GlobalObject& global_object, FunctionObject& constructor, size_t byte_length)
+{
+    auto& vm = global_object.vm();
+
+    auto* obj = ordinary_create_from_constructor<ArrayBuffer>(global_object, constructor, &GlobalObject::array_buffer_prototype, byte_length);
+    if (vm.exception())
+        return {};
+
+    return obj;
+}
+
 // 25.1.3.1 ArrayBuffer ( length ), https://tc39.es/ecma262/#sec-arraybuffer-length
-Value ArrayBufferConstructor::construct(FunctionObject&)
+Value ArrayBufferConstructor::construct(FunctionObject& new_target)
 {
     auto& vm = this->vm();
     auto byte_length = vm.argument(0).to_index(global_object());
@@ -59,7 +72,7 @@ Value ArrayBufferConstructor::construct(FunctionObject&)
         }
         return {};
     }
-    return ArrayBuffer::create(global_object(), byte_length);
+    return allocate_array_buffer(global_object(), new_target, byte_length);
 }
 
 // 25.1.4.1 ArrayBuffer.isView ( arg ), https://tc39.es/ecma262/#sec-arraybuffer.isview

@@ -31,7 +31,7 @@ void ArrayBufferConstructor::initialize(GlobalObject& global_object)
     u8 attr = Attribute::Writable | Attribute::Configurable;
     define_native_function(vm.names.isView, is_view, 1, attr);
 
-    // 25.1.5.4 ArrayBuffer.prototype [ @@toStringTag ], https://tc39.es/ecma262/#sec-arraybuffer.prototype-@@tostringtag
+    // 25.1.4.3 get ArrayBuffer [ @@species ], https://tc39.es/ecma262/#sec-get-arraybuffer-@@species
     define_native_accessor(*vm.well_known_symbol_species(), symbol_species_getter, {}, Attribute::Configurable);
 }
 

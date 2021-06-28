@@ -42,6 +42,7 @@
 #include <LibJS/Runtime/GeneratorObjectPrototype.h>
 #include <LibJS/Runtime/GlobalEnvironmentRecord.h>
 #include <LibJS/Runtime/GlobalObject.h>
+#include <LibJS/Runtime/IntlObject.h>
 #include <LibJS/Runtime/IteratorPrototype.h>
 #include <LibJS/Runtime/JSONObject.h>
 #include <LibJS/Runtime/MapConstructor.h>
@@ -50,6 +51,8 @@
 #include <LibJS/Runtime/MathObject.h>
 #include <LibJS/Runtime/NativeFunction.h>
 #include <LibJS/Runtime/NumberConstructor.h>
+#include <LibJS/Runtime/NumberFormatConstructor.h>
+#include <LibJS/Runtime/NumberFormatPrototype.h>
 #include <LibJS/Runtime/NumberPrototype.h>
 #include <LibJS/Runtime/Object.h>
 #include <LibJS/Runtime/ObjectConstructor.h>
@@ -168,6 +171,7 @@ void GlobalObject::initialize_global_object()
 
     define_property(vm.names.globalThis, this, attr);
     define_property(vm.names.console, heap().allocate<ConsoleObject>(*this, *this), attr);
+    define_property(vm.names.Intl, heap().allocate<IntlObject>(*this, *this), attr);
     define_property(vm.names.Math, heap().allocate<MathObject>(*this, *this), attr);
     define_property(vm.names.JSON, heap().allocate<JSONObject>(*this, *this), attr);
     define_property(vm.names.Reflect, heap().allocate<ReflectObject>(*this, *this), attr);
@@ -204,6 +208,7 @@ void GlobalObject::initialize_global_object()
     add_constructor(vm.names.ClassName, m_##snake_name##_constructor, m_##snake_name##_prototype);
     JS_ENUMERATE_NATIVE_ERRORS
     JS_ENUMERATE_TYPED_ARRAYS
+    JS_ENUMERATE_INTL_NATIVE_OBJECTS
 #undef __JS_ENUMERATE
 
     // The generator constructor cannot be initialized with add_constructor as it has no global binding

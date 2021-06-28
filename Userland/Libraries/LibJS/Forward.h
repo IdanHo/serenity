@@ -83,10 +83,14 @@
     __JS_ENUMERATE(SetIterator, set_iterator)     \
     __JS_ENUMERATE(StringIterator, string_iterator)
 
+#define JS_ENUMERATE_INTL_NATIVE_OBJECTS \
+    __JS_ENUMERATE(NumberFormat, number_format, NumberFormatPrototype, NumberFormatConstructor, void)
+
 #define JS_ENUMERATE_BUILTIN_TYPES \
     JS_ENUMERATE_NATIVE_OBJECTS    \
     JS_ENUMERATE_NATIVE_ERRORS     \
-    JS_ENUMERATE_TYPED_ARRAYS
+    JS_ENUMERATE_TYPED_ARRAYS      \
+    JS_ENUMERATE_INTL_NATIVE_OBJECTS
 
 #define JS_ENUMERATE_WELL_KNOWN_SYMBOLS                      \
     __JS_ENUMERATE(iterator, iterator)                       \
@@ -184,6 +188,7 @@ enum class AllowSideEffects {
 JS_ENUMERATE_NATIVE_OBJECTS_EXCLUDING_TEMPLATES
 JS_ENUMERATE_NATIVE_ERRORS
 JS_ENUMERATE_TYPED_ARRAYS
+JS_ENUMERATE_INTL_NATIVE_OBJECTS
 #undef __JS_ENUMERATE
 
 template<class T>

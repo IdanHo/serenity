@@ -71,6 +71,7 @@ set(SOURCES
     Runtime/GlobalEnvironmentRecord.cpp
     Runtime/GlobalObject.cpp
     Runtime/IndexedProperties.cpp
+    Runtime/IntlObject.cpp
     Runtime/IteratorOperations.cpp
     Runtime/IteratorPrototype.cpp
     Runtime/JSONObject.cpp
@@ -84,6 +85,8 @@ set(SOURCES
     Runtime/NativeFunction.cpp
     Runtime/NativeProperty.cpp
     Runtime/NumberConstructor.cpp
+    Runtime/NumberFormat.cpp
+    Runtime/NumberFormatConstructor.cpp
     Runtime/NumberObject.cpp
     Runtime/NumberPrototype.cpp
     Runtime/Object.cpp

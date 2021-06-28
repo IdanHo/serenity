@@ -36,8 +36,11 @@
     M(InvalidFractionDigits, "Fraction Digits must be an integer no less than 0, and no greater than 100")                              \
     M(InvalidHint, "Invalid hint: \"{}\"")                                                                                              \
     M(InvalidIndex, "Index must be a positive integer")                                                                                 \
+    M(InvalidLanguageTagType, "Language Tag must be a string or an object")                                                             \
+    M(InvalidLanguageTag, "Invalid language tag provided")                                                                              \
     M(InvalidLeftHandAssignment, "Invalid left-hand side in assignment")                                                                \
     M(InvalidLength, "Invalid {} length")                                                                                               \
+    M(InvalidOptionsProperty, "Invalid value {} for options property {}")                                                               \
     M(InvalidTimeValue, "Invalid time value")                                                                                           \
     M(InvalidRadix, "Radix must be an integer no less than 2, and no greater than 36")                                                  \
     M(IsNotA, "{} is not a {}")                                                                                                         \

@@ -24,6 +24,8 @@ namespace JS {
     P(EPSILON)                               \
     P(Function)                              \
     P(Infinity)                              \
+    P(Intl)                                  \
+    P(IntlLegacyConstructedSymbol)           \
     P(JSON)                                  \
     P(LN10)                                  \
     P(LN2)                                   \
@@ -37,6 +39,7 @@ namespace JS {
     P(NEGATIVE_INFINITY)                     \
     P(NaN)                                   \
     P(Number)                                \
+    P(NumberFormat)                          \
     P(PI)                                    \
     P(POSITIVE_INFINITY)                     \
     P(Proxy)                                 \
@@ -143,6 +146,7 @@ namespace JS {
     P(get)                                   \
     P(getBigInt64)                           \
     P(getBigUint64)                          \
+    P(getCanonicalLocales)                   \
     P(getDate)                               \
     P(getDay)                                \
     P(getFloat32)                            \

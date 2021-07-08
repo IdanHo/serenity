@@ -1,0 +1,12 @@
+name: Commit linter
+
+on: [pull_request_target]
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    if: always()
+
+    steps:
+      - name: TEST
+        run: echo "test"

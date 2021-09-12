@@ -79,6 +79,8 @@ public:
 private:
     explicit Window(Document&);
 
+    void call_animation_frame_callbacks();
+
     // https://html.spec.whatwg.org/multipage/window-object.html#concept-document-window
     WeakPtr<Document> m_associated_document;
 
@@ -90,6 +92,10 @@ private:
     NonnullOwnPtr<HighResolutionTime::Performance> m_performance;
     NonnullRefPtr<CSS::Screen> m_screen;
     RefPtr<Event> m_current_event;
+
+    NonnullRefPtr<Core::Timer> m_animation_frame_timer;
+    IDAllocator m_animation_frame_request_id_allocator;
+    HashMap<i32, JS::Handle<JS::FunctionObject>> m_animation_frame_callbacks;
 };
 
 }

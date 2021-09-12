@@ -28,6 +28,7 @@ Window::Window(Document& document)
     , m_associated_document(document)
     , m_performance(make<HighResolutionTime::Performance>(*this))
     , m_screen(CSS::Screen::create(*this))
+    , m_animation_frame_timer(Core::Timer::create_repeating(16, [this]() { call_animation_frame_callbacks(); }))
 {
 }
 
@@ -112,29 +113,30 @@ void Window::clear_interval(i32 timer_id)
     m_timers.remove(timer_id);
 }
 
-i32 Window::request_animation_frame(JS::FunctionObject& callback)
+void Window::call_animation_frame_callbacks()
 {
-    // FIXME: This is extremely fake!
-    static double fake_timestamp = 0;
-
-    i32 link_id = GUI::DisplayLink::register_callback([handle = make_handle(&callback)](i32 link_id) {
-        auto& function = const_cast<JS::FunctionObject&>(static_cast<JS::FunctionObject const&>(*handle.cell()));
+    for (auto& entry : m_animation_frame_callbacks) {
+        auto& function = const_cast<JS::FunctionObject&>(static_cast<JS::FunctionObject const&>(*entry.value.cell()));
         auto& vm = function.vm();
-        fake_timestamp += 10;
-        [[maybe_unused]] auto rc = vm.call(function, JS::js_undefined(), JS::Value(fake_timestamp));
+        (void)vm.call(function, JS::js_undefined(), JS::Value((double)Core::DateTime::now().timestamp()));
         if (vm.exception())
             vm.clear_exception();
-        GUI::DisplayLink::unregister_callback(link_id);
-    });
+        m_animation_frame_request_id_allocator.deallocate(entry.key);
+    }
+    m_animation_frame_callbacks.clear();
+}
 
-    // FIXME: Don't hand out raw DisplayLink ID's to JavaScript!
-    return link_id;
+i32 Window::request_animation_frame(JS::FunctionObject& callback)
+{
+    auto id = m_animation_frame_request_id_allocator.allocate();
+    m_animation_frame_callbacks.set(id, JS::make_handle(&callback));
+    return id;
 }
 
 void Window::cancel_animation_frame(i32 id)
 {
-    // FIXME: We should not be passing untrusted numbers to DisplayLink::unregister_callback()!
-    GUI::DisplayLink::unregister_callback(id);
+    m_animation_frame_request_id_allocator.deallocate(id);
+    m_animation_frame_callbacks.remove(id);
 }
 
 void Window::did_set_location_href(Badge<Bindings::LocationObject>, URL const& new_href)

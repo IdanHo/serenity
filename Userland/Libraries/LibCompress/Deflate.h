@@ -13,29 +13,9 @@
 #include <AK/Endian.h>
 #include <AK/Vector.h>
 #include <LibCompress/DeflateTables.h>
+#include <LibCompress/Huffman.h>
 
 namespace Compress {
-
-class CanonicalCode {
-public:
-    CanonicalCode() = default;
-    u32 read_symbol(InputBitStream&) const;
-    void write_symbol(OutputBitStream&, u32) const;
-
-    static const CanonicalCode& fixed_literal_codes();
-    static const CanonicalCode& fixed_distance_codes();
-
-    static Optional<CanonicalCode> from_bytes(ReadonlyBytes);
-
-private:
-    // Decompression - indexed by code
-    Vector<u16> m_symbol_codes;
-    Vector<u16> m_symbol_values;
-
-    // Compression - indexed by symbol
-    Array<u16, 288> m_bit_codes {}; // deflate uses a maximum of 288 symbols (maximum of 32 for distances)
-    Array<u16, 288> m_bit_code_lengths {};
-};
 
 class DeflateDecompressor final : public InputStream {
 private:

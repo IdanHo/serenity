@@ -1,6 +1,7 @@
 set(TEST_SOURCES
     TestDeflate.cpp
     TestGzip.cpp
+    TestHuffman.cpp
     TestZlib.cpp
 )
 

@@ -10,13 +10,11 @@
 #include <AK/BinaryHeap.h>
 #include <AK/BinarySearch.h>
 #include <AK/MemoryStream.h>
-#include <string.h>
-
 #include <LibCompress/Deflate.h>
 
 namespace Compress {
 
-const CanonicalCode& CanonicalCode::fixed_literal_codes()
+static CanonicalCode const& fixed_literal_codes()
 {
     static CanonicalCode code;
     static bool initialized = false;
@@ -30,7 +28,7 @@ const CanonicalCode& CanonicalCode::fixed_literal_codes()
     return code;
 }
 
-const CanonicalCode& CanonicalCode::fixed_distance_codes()
+static CanonicalCode const& fixed_distance_codes()
 {
     static CanonicalCode code;
     static bool initialized = false;
@@ -42,78 +40,6 @@ const CanonicalCode& CanonicalCode::fixed_distance_codes()
     initialized = true;
 
     return code;
-}
-
-Optional<CanonicalCode> CanonicalCode::from_bytes(ReadonlyBytes bytes)
-{
-    // FIXME: I can't quite follow the algorithm here, but it seems to work.
-
-    CanonicalCode code;
-
-    auto non_zero_symbols = 0;
-    auto last_non_zero = -1;
-    for (size_t i = 0; i < bytes.size(); i++) {
-        if (bytes[i] != 0) {
-            non_zero_symbols++;
-            last_non_zero = i;
-        }
-    }
-    if (non_zero_symbols == 1) { // special case - only 1 symbol
-        code.m_symbol_codes.append(0b10);
-        code.m_symbol_values.append(last_non_zero);
-        code.m_bit_codes[last_non_zero] = 0;
-        code.m_bit_code_lengths[last_non_zero] = 1;
-        return code;
-    }
-
-    auto next_code = 0;
-    for (size_t code_length = 1; code_length <= 15; ++code_length) {
-        next_code <<= 1;
-        auto start_bit = 1 << code_length;
-
-        for (size_t symbol = 0; symbol < bytes.size(); ++symbol) {
-            if (bytes[symbol] != code_length)
-                continue;
-
-            if (next_code > start_bit)
-                return {};
-
-            code.m_symbol_codes.append(start_bit | next_code);
-            code.m_symbol_values.append(symbol);
-            code.m_bit_codes[symbol] = fast_reverse16(start_bit | next_code, code_length); // DEFLATE writes huffman encoded symbols as lsb-first
-            code.m_bit_code_lengths[symbol] = code_length;
-
-            next_code++;
-        }
-    }
-
-    if (next_code != (1 << 15)) {
-        return {};
-    }
-
-    return code;
-}
-
-u32 CanonicalCode::read_symbol(InputBitStream& stream) const
-{
-    u32 code_bits = 1;
-
-    for (;;) {
-        code_bits = code_bits << 1 | stream.read_bits(1);
-        if (code_bits >= (1 << 16))
-            return UINT32_MAX; // the maximum symbol in deflate is 288, so we use UINT32_MAX (an impossible value) to indicate an error
-
-        // FIXME: This is very inefficient and could greatly be improved by implementing this
-        //        algorithm: https://www.hanshq.net/zip.html#huffdec
-        size_t index;
-        if (binary_search(m_symbol_codes.span(), code_bits, &index))
-            return m_symbol_values[index];
-    }
-}
-
-void CanonicalCode::write_symbol(OutputBitStream& stream, u32 symbol) const
-{
-    stream.write_bits(m_bit_codes[symbol], m_bit_code_lengths[symbol]);
 }
 
 DeflateDecompressor::CompressedBlock::CompressedBlock(DeflateDecompressor& decompressor, CanonicalCode literal_codes, Optional<CanonicalCode> distance_codes)
@@ -246,7 +172,7 @@ size_t DeflateDecompressor::read(Bytes bytes)
 
             if (block_type == 0b01) {
                 m_state = State::ReadingCompressedBlock;
-                new (&m_compressed_block) CompressedBlock(*this, CanonicalCode::fixed_literal_codes(), CanonicalCode::fixed_distance_codes());
+                new (&m_compressed_block) CompressedBlock(*this, fixed_literal_codes(), fixed_distance_codes());
 
                 continue;
             }
@@ -1025,7 +951,7 @@ void DeflateCompressor::flush()
         write_uncompressed();
     } else if (fixed_huffman_size <= dynamic_huffman_size) { // If the fixed and dynamic huffman codes come out the same size, prefer the fixed version, as it takes less time to decode
         m_output_stream.write_bits(0b01, 2);                 // fixed huffman codes
-        write_huffman(CanonicalCode::fixed_literal_codes(), CanonicalCode::fixed_distance_codes());
+        write_huffman(fixed_literal_codes(), fixed_distance_codes());
     } else {
         m_output_stream.write_bits(0b10, 2); // dynamic huffman codes
         auto literal_code = CanonicalCode::from_bytes(dynamic_literal_bit_lengths);

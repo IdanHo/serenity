@@ -44,8 +44,8 @@ static CanonicalCode const& fixed_distance_codes()
 
 DeflateDecompressor::CompressedBlock::CompressedBlock(DeflateDecompressor& decompressor, CanonicalCode literal_codes, Optional<CanonicalCode> distance_codes)
     : m_decompressor(decompressor)
-    , m_literal_codes(literal_codes)
-    , m_distance_codes(distance_codes)
+    , m_literal_codes(move(literal_codes))
+    , m_distance_codes(move(distance_codes))
 {
 }
 
@@ -188,7 +188,7 @@ size_t DeflateDecompressor::read(Bytes bytes)
                 }
 
                 m_state = State::ReadingCompressedBlock;
-                new (&m_compressed_block) CompressedBlock(*this, literal_codes, distance_codes);
+                new (&m_compressed_block) CompressedBlock(*this, move(literal_codes), move(distance_codes));
 
                 continue;
             }

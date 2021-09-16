@@ -29,6 +29,7 @@ set(AK_TEST_SOURCES
     TestHashFunctions.cpp
     TestHashMap.cpp
     TestHashTable.cpp
+    TestHeapBackedCircularDuplexStream.cpp
     TestHeapBackedCircularQueue.cpp
     TestHex.cpp
     TestIPv4Address.cpp

@@ -140,6 +140,11 @@ public:
         return Stream::handle_any_error() || handled_errors;
     }
 
+    size_t bit_offset() const
+    {
+        return m_bit_offset;
+    }
+
 private:
     Optional<u8> m_next_byte;
     size_t m_bit_offset { 0 };

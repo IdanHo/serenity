@@ -1,4 +1,5 @@
 set(SOURCES
+    Brotli.cpp
     Deflate.cpp
     Gzip.cpp
     Huffman.cpp

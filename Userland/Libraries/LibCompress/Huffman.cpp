@@ -41,7 +41,8 @@ ALWAYS_INLINE static u16 fast_reverse16(u16 value, size_t bits)
     return reversed >> (16 - bits);
 }
 
-Optional<CanonicalCode> CanonicalCode::from_bytes(ReadonlyBytes bytes)
+template<size_t MaxSymbols>
+Optional<CanonicalCode<MaxSymbols>> CanonicalCode<MaxSymbols>::from_bytes(ReadonlyBytes bytes)
 {
     // FIXME: I can't quite follow the algorithm here, but it seems to work.
 
@@ -77,7 +78,7 @@ Optional<CanonicalCode> CanonicalCode::from_bytes(ReadonlyBytes bytes)
 
             code.m_symbol_codes.append(start_bit | next_code);
             code.m_symbol_values.append(symbol);
-            code.m_bit_codes[symbol] = fast_reverse16(start_bit | next_code, code_length); // DEFLATE writes huffman encoded symbols as lsb-first
+            code.m_bit_codes[symbol] = fast_reverse16(start_bit | next_code, code_length); // DEFLATE/Brotli write huffman encoded symbols as lsb-first
             code.m_bit_code_lengths[symbol] = code_length;
 
             next_code++;
@@ -91,14 +92,15 @@ Optional<CanonicalCode> CanonicalCode::from_bytes(ReadonlyBytes bytes)
     return code;
 }
 
-u32 CanonicalCode::read_symbol(InputBitStream& stream) const
+template<size_t MaxSymbols>
+u32 CanonicalCode<MaxSymbols>::read_symbol(InputBitStream& stream) const
 {
     u32 code_bits = 1;
 
     for (;;) {
         code_bits = code_bits << 1 | stream.read_bits(1);
         if (code_bits >= (1 << 16))
-            return UINT32_MAX; // the maximum symbol in deflate is 288, so we use UINT32_MAX (an impossible value) to indicate an error
+            return AK::NumericLimits<u32>::max(); // We statically assert that these values is not a valid symbol, and is instead used to indicate an error
 
         // FIXME: This is very inefficient and could greatly be improved by implementing this
         //        algorithm: https://www.hanshq.net/zip.html#huffdec
@@ -108,7 +110,8 @@ u32 CanonicalCode::read_symbol(InputBitStream& stream) const
     }
 }
 
-void CanonicalCode::write_symbol(OutputBitStream& stream, u32 symbol) const
+template<size_t MaxSymbols>
+void CanonicalCode<MaxSymbols>::write_symbol(OutputBitStream& stream, u32 symbol) const
 {
     stream.write_bits(m_bit_codes[symbol], m_bit_code_lengths[symbol]);
 }

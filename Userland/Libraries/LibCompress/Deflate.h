@@ -17,11 +17,17 @@
 
 namespace Compress {
 
+namespace Deflate {
+using CodeLengthCode = CanonicalCode<19>;
+using LiteralCode = CanonicalCode<288>;
+using DistanceCode = CanonicalCode<32>;
+}
+
 class DeflateDecompressor final : public InputStream {
 private:
     class CompressedBlock {
     public:
-        CompressedBlock(DeflateDecompressor&, CanonicalCode literal_codes, Optional<CanonicalCode> distance_codes);
+        CompressedBlock(DeflateDecompressor&, Deflate::LiteralCode literal_codes, Optional<Deflate::DistanceCode> distance_codes);
 
         bool try_read_more();
 
@@ -29,8 +35,8 @@ private:
         bool m_eof { false };
 
         DeflateDecompressor& m_decompressor;
-        CanonicalCode m_literal_codes;
-        Optional<CanonicalCode> m_distance_codes;
+        Deflate::LiteralCode m_literal_codes;
+        Optional<Deflate::DistanceCode> m_distance_codes;
     };
 
     class UncompressedBlock {
@@ -69,7 +75,7 @@ public:
 private:
     u32 decode_length(u32);
     u32 decode_distance(u32);
-    void decode_codes(CanonicalCode& literal_code, Optional<CanonicalCode>& distance_code);
+    void decode_codes(Deflate::LiteralCode& literal_code, Optional<Deflate::DistanceCode>& distance_code);
 
     bool m_read_final_bock { false };
 
@@ -151,10 +157,10 @@ private:
     template<size_t Size>
     static void generate_huffman_lengths(Array<u8, Size>& lengths, const Array<u16, Size>& frequencies, size_t max_bit_length, u16 frequency_cap = UINT16_MAX);
     size_t huffman_block_length(const Array<u8, max_huffman_literals>& literal_bit_lengths, const Array<u8, max_huffman_distances>& distance_bit_lengths);
-    void write_huffman(const CanonicalCode& literal_code, const Optional<CanonicalCode>& distance_code);
+    void write_huffman(const Deflate::LiteralCode& literal_code, const Optional<Deflate::DistanceCode>& distance_code);
     static size_t encode_huffman_lengths(const Array<u8, max_huffman_literals + max_huffman_distances>& lengths, size_t lengths_count, Array<code_length_symbol, max_huffman_literals + max_huffman_distances>& encoded_lengths);
     size_t encode_block_lengths(const Array<u8, max_huffman_literals>& literal_bit_lengths, const Array<u8, max_huffman_distances>& distance_bit_lengths, Array<code_length_symbol, max_huffman_literals + max_huffman_distances>& encoded_lengths, size_t& literal_code_count, size_t& distance_code_count);
-    void write_dynamic_huffman(const CanonicalCode& literal_code, size_t literal_code_count, const Optional<CanonicalCode>& distance_code, size_t distance_code_count, const Array<u8, 19>& code_lengths_bit_lengths, size_t code_length_count, const Array<code_length_symbol, max_huffman_literals + max_huffman_distances>& encoded_lengths, size_t encoded_lengths_count);
+    void write_dynamic_huffman(const Deflate::LiteralCode& literal_code, size_t literal_code_count, const Optional<Deflate::DistanceCode>& distance_code, size_t distance_code_count, const Array<u8, 19>& code_lengths_bit_lengths, size_t code_length_count, const Array<code_length_symbol, max_huffman_literals + max_huffman_distances>& encoded_lengths, size_t encoded_lengths_count);
 
     size_t uncompressed_block_length();
     size_t fixed_block_length();

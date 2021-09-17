@@ -25,7 +25,7 @@ TEST_CASE(canonical_code_simple)
         0x00, 0x01, 0x01, 0x02, 0x03, 0x05, 0x08, 0x0d, 0x15
     };
 
-    const auto huffman = Compress::CanonicalCode::from_bytes(code).value();
+    const auto huffman = Compress::CanonicalCode<32>::from_bytes(code).value();
     auto memory_stream = InputMemoryStream { input };
     auto bit_stream = InputBitStream { memory_stream };
 
@@ -45,7 +45,7 @@ TEST_CASE(canonical_code_complex)
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05
     };
 
-    const auto huffman = Compress::CanonicalCode::from_bytes(code).value();
+    const auto huffman = Compress::CanonicalCode<19>::from_bytes(code).value();
     auto memory_stream = InputMemoryStream { input };
     auto bit_stream = InputBitStream { memory_stream };
 

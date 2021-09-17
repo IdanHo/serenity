@@ -6,6 +6,7 @@
 
 #include <AK/Array.h>
 #include <AK/BitStream.h>
+#include <AK/NumericLimits.h>
 #include <AK/Optional.h>
 #include <AK/Vector.h>
 
@@ -13,7 +14,10 @@
 
 namespace Compress {
 
+template<size_t MaxSymbols>
 class CanonicalCode {
+    static_assert(MaxSymbols < AK::NumericLimits<u32>::max());
+
 public:
     CanonicalCode() = default;
     u32 read_symbol(InputBitStream&) const;
@@ -27,8 +31,13 @@ private:
     Vector<u16> m_symbol_values;
 
     // Compression - indexed by symbol
-    Array<u16, 288> m_bit_codes {}; // deflate uses a maximum of 288 symbols (maximum of 32 for distances)
-    Array<u16, 288> m_bit_code_lengths {};
+    Array<u16, MaxSymbols> m_bit_codes {};
+    Array<u16, MaxSymbols> m_bit_code_lengths {};
 };
+
+// DEFLATE codes
+template class CanonicalCode<19>;
+template class CanonicalCode<32>;
+template class CanonicalCode<288>;
 
 }

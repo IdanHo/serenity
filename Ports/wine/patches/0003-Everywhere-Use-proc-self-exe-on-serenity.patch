@@ -1,0 +1,122 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Idan Horowitz <idan.horowitz@gmail.com>
+Date: Sat, 19 Feb 2022 16:08:35 +0200
+Subject: [PATCH] Everywhere: Use /proc/self/exe on serenity
+
+Add serenity to the list of operating systems that support the
+/proc/self/exe file.
+---
+ dlls/ntdll/unix/loader.c | 2 +-
+ libs/wine/config.c       | 2 +-
+ loader/main.c            | 2 +-
+ server/unicode.c         | 2 +-
+ tools/widl/widl.c        | 2 +-
+ tools/winegcc/winegcc.c  | 2 +-
+ tools/wmc/wmc.c          | 2 +-
+ tools/wrc/wrc.c          | 2 +-
+ 8 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index 82d099d..1ff3d07 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -624,7 +624,7 @@ static void init_paths( char *argv[] )
+     if (!(build_dir = remove_tail( ntdll_dir, "/dlls/ntdll" )))
+     {
+         if (!(dll_dir = remove_tail( ntdll_dir, so_dir ))) dll_dir = ntdll_dir;
+-#if (defined(__linux__) && !defined(__ANDROID__)) || defined(__FreeBSD_kernel__) || defined(__NetBSD__)
++#if (defined(__linux__) && !defined(__ANDROID__)) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__serenity__)
+         bin_dir = realpath_dirname( "/proc/self/exe" );
+ #elif defined (__FreeBSD__) || defined(__DragonFly__)
+         {
+diff --git a/libs/wine/config.c b/libs/wine/config.c
+index 23c76fd..4cb9443 100644
+--- a/libs/wine/config.c
++++ b/libs/wine/config.c
+@@ -58,7 +58,7 @@ static char *wineserver64;
+ static void fatal_error( const char *err, ... )  __attribute__((noreturn,format(printf,1,2)));
+ #endif
+ 
+-#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__)
++#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__serenity__)
+ static const char exe_link[] = "/proc/self/exe";
+ #else
+ static const char exe_link[] = "";
+diff --git a/loader/main.c b/loader/main.c
+index 242ff15..de4c285 100644
+--- a/loader/main.c
++++ b/loader/main.c
+@@ -84,7 +84,7 @@ static char *build_path( const char *dir, const char *name )
+ 
+ static const char *get_self_exe( char *argv0 )
+ {
+-#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__)
++#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__serenity__)
+     return "/proc/self/exe";
+ #elif defined (__FreeBSD__) || defined(__DragonFly__)
+     static int pathname[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+diff --git a/server/unicode.c b/server/unicode.c
+index 86a1217..a82bdc4 100644
+--- a/server/unicode.c
++++ b/server/unicode.c
+@@ -241,7 +241,7 @@ static char *get_nls_dir(void)
+     char *p, *dir, *ret;
+     const char *nlsdir = BIN_TO_NLSDIR;
+ 
+-#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__)
++#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__serenity__)
+     dir = realpath( "/proc/self/exe", NULL );
+ #elif defined (__FreeBSD__) || defined(__DragonFly__)
+     static int pathname[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+diff --git a/tools/widl/widl.c b/tools/widl/widl.c
+index 0b5f072..f456cd4 100644
+--- a/tools/widl/widl.c
++++ b/tools/widl/widl.c
+@@ -484,7 +484,7 @@ static void init_argv0_dir( const char *argv0 )
+ #ifndef _WIN32
+     char *dir;
+ 
+-#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__)
++#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__serenity__)
+     dir = realpath( "/proc/self/exe", NULL );
+ #elif defined (__FreeBSD__) || defined(__DragonFly__)
+     static int pathname[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+diff --git a/tools/winegcc/winegcc.c b/tools/winegcc/winegcc.c
+index e8457e4..6bc6291 100644
+--- a/tools/winegcc/winegcc.c
++++ b/tools/winegcc/winegcc.c
+@@ -652,7 +652,7 @@ static void init_argv0_dir( const char *argv0 )
+ #ifndef _WIN32
+     char *dir;
+ 
+-#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__)
++#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__serenity__)
+     dir = realpath( "/proc/self/exe", NULL );
+ #elif defined (__FreeBSD__) || defined(__DragonFly__)
+     static int pathname[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+diff --git a/tools/wmc/wmc.c b/tools/wmc/wmc.c
+index 2d3dcaf..606a319 100644
+--- a/tools/wmc/wmc.c
++++ b/tools/wmc/wmc.c
+@@ -154,7 +154,7 @@ static void init_argv0_dir( const char *argv0 )
+ #ifndef _WIN32
+     char *dir;
+ 
+-#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__)
++#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__serenity__)
+     dir = realpath( "/proc/self/exe", NULL );
+ #elif defined (__FreeBSD__) || defined(__DragonFly__)
+     static int pathname[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+diff --git a/tools/wrc/wrc.c b/tools/wrc/wrc.c
+index f848b30..f354744 100644
+--- a/tools/wrc/wrc.c
++++ b/tools/wrc/wrc.c
+@@ -304,7 +304,7 @@ static void init_argv0_dir( const char *argv0 )
+ #ifndef _WIN32
+     char *dir;
+ 
+-#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__)
++#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__serenity__)
+     dir = realpath( "/proc/self/exe", NULL );
+ #elif defined (__FreeBSD__) || defined(__DragonFly__)
+     static int pathname[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };

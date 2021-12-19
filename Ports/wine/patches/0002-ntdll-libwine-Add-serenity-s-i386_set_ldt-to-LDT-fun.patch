@@ -1,0 +1,72 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Idan Horowitz <idan.horowitz@gmail.com>
+Date: Sat, 19 Feb 2022 16:02:18 +0200
+Subject: [PATCH] ntdll+libwine: Add serenity's i386_set_ldt to LDT functions
+
+---
+ dlls/ntdll/unix/signal_i386.c | 13 +++++++++++++
+ libs/wine/ldt.c               | 13 +++++++++++++
+ 2 files changed, 26 insertions(+)
+
+diff --git a/dlls/ntdll/unix/signal_i386.c b/dlls/ntdll/unix/signal_i386.c
+index bf3abc1..59a7923 100644
+--- a/dlls/ntdll/unix/signal_i386.c
++++ b/dlls/ntdll/unix/signal_i386.c
+@@ -182,6 +182,10 @@ static inline int set_thread_area( struct modify_ldt_s *ptr )
+     return syscall( 243 /* SYS_set_thread_area */, ptr );
+ }
+ 
++#elif defined(__serenity__)
++
++#include <serenity.h>
++
+ #elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__DragonFly__)
+ 
+ #include <machine/trap.h>
+@@ -2085,6 +2089,15 @@ static void ldt_set_entry( WORD sel, LDT_ENTRY entry )
+     ldt_info.seg_not_present = !entry.HighWord.Bits.Pres;
+     ldt_info.usable          = entry.HighWord.Bits.Sys;
+     if (modify_ldt( 0x11, &ldt_info, sizeof(ldt_info) ) < 0) perror( "modify_ldt" );
++#elif defined(__serenity__)
++    unsigned int base = (unsigned int)ldt_get_base(entry);
++    unsigned int limit = entry.LimitLow | (entry.HighWord.Bits.LimitHi << 16);
++    if (i386_set_ldt(index, base, limit, entry.HighWord.Bits.Type & 0xf, entry.HighWord.Bits.Pres, entry.HighWord.Bits.Default_Big, entry.HighWord.Bits.Granularity) < 0)
++    {
++        perror("i386_set_ldt");
++        fprintf( stderr, "Did you set the \"user_ldt_control\" sysctl parameter?\n" );
++        exit(1);
++    }
+ #elif defined(__NetBSD__) || defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__OpenBSD__) || defined(__DragonFly__)
+     /* The kernel will only let us set LDTs with user priority level */
+     if (entry.HighWord.Bits.Pres && entry.HighWord.Bits.Dpl != 3) entry.HighWord.Bits.Dpl = 3;
+diff --git a/libs/wine/ldt.c b/libs/wine/ldt.c
+index 3fc1c0c..bdb5f77 100644
+--- a/libs/wine/ldt.c
++++ b/libs/wine/ldt.c
+@@ -114,6 +114,10 @@ static inline int set_thread_area( struct modify_ldt_s *ptr )
+ #endif
+ #endif
+ 
++#if defined(__serenity__)
++#include <serenity.h>
++#endif
++
+ #if defined(__NetBSD__) || defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__OpenBSD__) || defined(__DragonFly__)
+ #include <machine/segments.h>
+ #include <machine/sysarch.h>
+@@ -212,6 +216,15 @@ static int internal_set_entry( unsigned short sel, const LDT_ENTRY *entry )
+         if ((ret = modify_ldt(0x11, &ldt_info, sizeof(ldt_info))) < 0)
+             perror( "modify_ldt" );
+     }
++#elif defined(__serenity__)
++    unsigned int base = (unsigned int)wine_ldt_get_base(entry);
++    unsigned int limit = entry->LimitLow | (entry->HighWord.Bits.LimitHi << 16);
++    if (i386_set_ldt(index, base, limit, entry->HighWord.Bits.Type & 0xf, entry->HighWord.Bits.Pres, entry->HighWord.Bits.Default_Big, entry->HighWord.Bits.Granularity) < 0)
++    {
++        perror("i386_set_ldt");
++        fprintf( stderr, "Did you set the \"user_ldt_control\" sysctl parameter?\n" );
++        exit(1);
++    }
+ #elif defined(__NetBSD__) || defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__OpenBSD__) || defined(__DragonFly__)
+     {
+ 	LDT_ENTRY entry_copy = *entry;

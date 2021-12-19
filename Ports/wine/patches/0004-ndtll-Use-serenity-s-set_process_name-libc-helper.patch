@@ -1,0 +1,56 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Idan Horowitz <idan.horowitz@gmail.com>
+Date: Sat, 19 Feb 2022 16:09:40 +0200
+Subject: [PATCH] ndtll: Use serenity's set_process_name libc helper
+
+---
+ dlls/ntdll/unix/env.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/ntdll/unix/env.c b/dlls/ntdll/unix/env.c
+index 30d8ac1..425c532 100644
+--- a/dlls/ntdll/unix/env.c
++++ b/dlls/ntdll/unix/env.c
+@@ -872,11 +872,11 @@ char **build_envp( const WCHAR *envW )
+ 
+ 
+ /***********************************************************************
+- *           set_process_name
++ *           _set_process_name
+  *
+  * Change the process name in the ps output.
+  */
+-static void set_process_name( const char *name )
++static void _set_process_name( const char *name )
+ {
+     char *p;
+ 
+@@ -888,7 +888,9 @@ static void set_process_name( const char *name )
+ #ifdef HAVE_SETPROGNAME
+     setprogname( name );
+ #endif
+-#ifdef HAVE_PRCTL
++#ifdef __serenity__
++    set_process_name(name, strlen(name));
++#elif defined(HAVE_PRCTL)
+ #ifndef PR_SET_NAME
+ # define PR_SET_NAME 15
+ #endif
+@@ -923,7 +925,7 @@ static void rebuild_argv(void)
+     else memmove( main_argv, main_argv + 1, (main_argc - 1) * sizeof(main_argv[0]) );
+ 
+     main_argv[--main_argc] = NULL;
+-    set_process_name( main_argv[0] );
++    _set_process_name( main_argv[0] );
+ }
+ 
+ 
+@@ -990,7 +992,7 @@ static void prepend_argv( const char **args, int count )
+ 
+     main_argc = new_argc;
+     main_argv = new_argv;
+-    set_process_name( main_argv[0] );
++    _set_process_name( main_argv[0] );
+ }
+ 
+ 

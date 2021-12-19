@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Idan Horowitz <idan.horowitz@gmail.com>
+Date: Sat, 19 Feb 2022 16:09:56 +0200
+Subject: [PATCH] ntdll: Stub out ucontext on serenity
+
+---
+ dlls/ntdll/unix/signal_i386.c | 26 ++++++++++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/dlls/ntdll/unix/signal_i386.c b/dlls/ntdll/unix/signal_i386.c
+index 59a7923..2de0a2c 100644
+--- a/dlls/ntdll/unix/signal_i386.c
++++ b/dlls/ntdll/unix/signal_i386.c
+@@ -186,6 +186,32 @@ static inline int set_thread_area( struct modify_ldt_s *ptr )
+ 
+ #include <serenity.h>
+ 
++#define EAX_sig(context)     ((context)->uc_mcontext.eax)
++#define EBX_sig(context)     ((context)->uc_mcontext.ebx)
++#define ECX_sig(context)     ((context)->uc_mcontext.ecx)
++#define EDX_sig(context)     ((context)->uc_mcontext.edx)
++#define ESI_sig(context)     ((context)->uc_mcontext.esi)
++#define EDI_sig(context)     ((context)->uc_mcontext.edi)
++#define EBP_sig(context)     ((context)->uc_mcontext.ebp)
++
++#define CS_sig(context)      ((context)->uc_mcontext.cs)
++#define DS_sig(context)      ((context)->uc_mcontext.ds)
++#define ES_sig(context)      ((context)->uc_mcontext.es)
++#define FS_sig(context)      ((context)->uc_mcontext.fs)
++#define GS_sig(context)      ((context)->uc_mcontext.gs)
++#define SS_sig(context)      ((context)->uc_mcontext.ss)
++
++#define TRAP_sig(context)    (-1)  /* FIXME */
++#define ERROR_sig(context)   (-1)  /* FIXME */
++#define EFL_sig(context)     ((context)->uc_mcontext.eflags)
++
++#define EIP_sig(context)     ((context)->uc_mcontext.eip)
++#define ESP_sig(context)     ((context)->uc_mcontext.esp)
++
++#define FPU_sig(context)     NULL  /* FIXME */
++#define FPUX_sig(context)    NULL  /* FIXME */
++#define XState_sig(context)  NULL  /* FIXME */
++
+ #elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__DragonFly__)
+ 
+ #include <machine/trap.h>

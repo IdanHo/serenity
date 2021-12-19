@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Idan Horowitz <idan.horowitz@gmail.com>
+Date: Sat, 19 Feb 2022 15:59:19 +0200
+Subject: [PATCH] ntdll: Don't use fstatfs
+
+---
+ dlls/ntdll/unix/file.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
+index 10d8f3d..e68197f 100644
+--- a/dlls/ntdll/unix/file.c
++++ b/dlls/ntdll/unix/file.c
+@@ -1162,7 +1162,7 @@ static BOOLEAN get_dir_case_sensitivity_stat( const char *dir )
+         return FALSE;
+     return TRUE;
+ 
+-#elif defined(__linux__)
++#elif defined(__linux__) && !defined(__serenity__)
+     BOOLEAN sens = TRUE;
+     struct statfs stfs;
+     struct stat st;
+@@ -6531,11 +6531,12 @@ NTSTATUS WINAPI NtQueryVolumeInformationFile( HANDLE handle, IO_STATUS_BLOCK *io
+         if (!get_mountmgr_fs_info( handle, fd, &drive, sizeof(drive) )) fs_type = drive.fs_type;
+         else
+         {
++#if defined(HAVE_FSTATFS)
+             struct statfs stfs;
+ 
+             if (!fstatfs( fd, &stfs ))
+             {
+-#if defined(linux) && defined(HAVE_FSTATFS)
++#if defined(linux)
+                 switch (stfs.f_type)
+                 {
+                 case 0x9660:
+@@ -6559,6 +6560,7 @@ NTSTATUS WINAPI NtQueryVolumeInformationFile( HANDLE handle, IO_STATUS_BLOCK *io
+                     fs_type = MOUNTMGR_FS_TYPE_FAT32;
+ #endif
+             }
++#endif
+         }
+ 
+         switch (fs_type)

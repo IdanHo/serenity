@@ -50,6 +50,7 @@ Time kgettimeofday();
     __ENUMERATE_PLEDGE_PROMISE(dpath)     \
     __ENUMERATE_PLEDGE_PROMISE(inet)      \
     __ENUMERATE_PLEDGE_PROMISE(id)        \
+    __ENUMERATE_PLEDGE_PROMISE(i386)      \
     __ENUMERATE_PLEDGE_PROMISE(proc)      \
     __ENUMERATE_PLEDGE_PROMISE(ptrace)    \
     __ENUMERATE_PLEDGE_PROMISE(exec)      \

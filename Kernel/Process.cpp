@@ -222,17 +222,21 @@ ErrorOr<NonnullRefPtr<Process>> Process::try_create(RefPtr<Thread>& first_thread
 {
     auto space = TRY(Memory::AddressSpace::try_create(fork_parent ? &fork_parent->address_space() : nullptr));
     auto unveil_tree = UnveilNode { TRY(KString::try_create("/"sv)), UnveilMetadata(TRY(KString::try_create("/"sv))) };
-    auto process = TRY(adopt_nonnull_ref_or_enomem(new (nothrow) Process(move(name), uid, gid, ppid, is_kernel_process, move(current_directory), move(executable), tty, move(unveil_tree))));
+    auto* ldt = new (nothrow) LDT;
+    if (!ldt)
+        return ENOMEM;
+    auto process = TRY(adopt_nonnull_ref_or_enomem(new (nothrow) Process(move(name), uid, gid, ppid, is_kernel_process, move(current_directory), move(executable), tty, ldt, move(unveil_tree))));
     TRY(process->attach_resources(move(space), first_thread, fork_parent));
     return process;
 }
 
-Process::Process(NonnullOwnPtr<KString> name, UserID uid, GroupID gid, ProcessID ppid, bool is_kernel_process, RefPtr<Custody> current_directory, RefPtr<Custody> executable, TTY* tty, UnveilNode unveil_tree)
+Process::Process(NonnullOwnPtr<KString> name, UserID uid, GroupID gid, ProcessID ppid, bool is_kernel_process, RefPtr<Custody> current_directory, RefPtr<Custody> executable, TTY* tty, LDT* ldt, UnveilNode unveil_tree)
     : m_name(move(name))
     , m_is_kernel_process(is_kernel_process)
     , m_executable(move(executable))
     , m_current_directory(move(current_directory))
     , m_tty(tty)
+    , m_ldt(ldt)
     , m_unveil_data(move(unveil_tree))
     , m_wait_blocker_set(*this)
 {
@@ -664,6 +668,8 @@ void Process::finalize()
 
     unblock_waiters(Thread::WaitBlocker::UnblockFlags::Terminated);
 
+    delete m_ldt.exchange(nullptr);
+
     m_space->remove_all_regions({});
 
     VERIFY(ref_count() > 0);
@@ -934,6 +940,73 @@ ErrorOr<void> Process::require_promise(Pledge promise)
     Thread::current()->set_promise_violation_pending(true);
     (void)try_set_coredump_property("pledge_violation"sv, to_string(promise));
     return EPROMISEVIOLATION;
+}
+
+// We can't modify a live LDT, so we instead create a new clone of the old LDT, modify it, and then atomically swap to it
+ErrorOr<void> Process::set_ldt_entry(u16 index, Descriptor& descriptor)
+{
+    VERIFY(index < descriptor_table_entries);
+    MutexLocker locker(m_ldt_lock);
+
+    auto* new_ldt = new (nothrow) LDT;
+    if (!new_ldt)
+        return ENOMEM;
+
+    auto* old_ldt = m_ldt.load(AK::memory_order_relaxed); // The old LDT has to stay alive until all Processors reload the new LDT
+
+    new_ldt->length = max(old_ldt->length, index + 1);
+    auto new_ldt_size = TRY(Memory::page_round_up(new_ldt->length * sizeof(Descriptor)));
+    new_ldt->region = TRY(MM.allocate_contiguous_kernel_region(new_ldt_size, "Local Descriptor Table"sv, Memory::Region::Access::ReadWrite));
+
+    if (old_ldt->region)
+        memcpy(new_ldt->address().as_ptr(), old_ldt->address().as_ptr(), old_ldt->size());
+    if (new_ldt_size > old_ldt->size())
+        memset(new_ldt->address().offset(old_ldt->size()).as_ptr(), 0, new_ldt_size - old_ldt->size());
+    reinterpret_cast<Descriptor*>(new_ldt->address().as_ptr())[index] = descriptor;
+
+    m_ldt.store(new_ldt);
+
+    {
+        SpinlockLocker lock(g_scheduler_lock);
+        // Reload the LDT on every processor that is currently executing a thread for this for Process
+        for_each_thread([&](auto& thread) {
+            if (thread.state() != Thread::State::Running)
+                return;
+            if (thread.cpu() == Processor::current_id())
+                return;
+            auto& proc = Processor::current();
+            Processor::smp_unicast(
+                thread.cpu(),
+                [&]() {
+                    VERIFY(&Processor::current() != &proc);
+                    VERIFY(&thread == Processor::current_thread());
+                    Processor::current().load_ldt(new_ldt->address(), new_ldt->size());
+                },
+                false);
+        });
+    }
+    Processor::current().load_ldt(new_ldt->address(), new_ldt->size());
+
+    delete old_ldt;
+    return {};
+}
+
+ErrorOr<Process::LDT*> Process::clone_ldt()
+{
+    MutexLocker locker(m_ldt_lock);
+
+    auto* cloned_ldt = new (nothrow) LDT;
+    if (!cloned_ldt)
+        return ENOMEM;
+
+    auto* current_ldt = m_ldt.load(AK::memory_order_relaxed);
+    cloned_ldt->length = current_ldt->length;
+    if (current_ldt->region) {
+        auto ldt_region_size = TRY(Memory::page_round_up(current_ldt->size()));
+        cloned_ldt->region = TRY(MM.allocate_contiguous_kernel_region(ldt_region_size, "Local Descriptor Table"sv, Memory::Region::Access::ReadWrite));
+        memcpy(cloned_ldt->address().as_ptr(), current_ldt->address().as_ptr(), current_ldt->size());
+    }
+    return cloned_ldt;
 }
 
 }

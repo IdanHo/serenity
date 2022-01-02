@@ -22,6 +22,7 @@ VALIDATE_IS_X86()
 #    define GDT_SELECTOR_TLS 0x28
 #    define GDT_SELECTOR_PROC 0x30
 #    define GDT_SELECTOR_TSS 0x38
+#    define GDT_SELECTOR_LDT 0x40
 
 // SYSENTER makes certain assumptions on how the GDT is structured:
 static_assert(GDT_SELECTOR_CODE0 + 8 == GDT_SELECTOR_DATA0); // SS0 = CS0 + 8
@@ -36,6 +37,8 @@ static_assert(GDT_SELECTOR_CODE0 + 24 == GDT_SELECTOR_DATA3); // SS3 = CS0 + 32
 #    define GDT_SELECTOR_CODE3 0x20
 #    define GDT_SELECTOR_TSS 0x28
 #    define GDT_SELECTOR_TSS_PART2 0x30
+#    define GDT_SELECTOR_LDT 0x38
+#    define GDT_SELECTOR_LDT_PART2 0x40
 #endif
 
 namespace Kernel {
@@ -106,6 +109,8 @@ union [[gnu::packed]] Descriptor {
 };
 
 static_assert(AssertSize<Descriptor, 8>());
+
+static constexpr u16 descriptor_table_entries = 8192;
 
 enum class IDTEntryType {
     TaskGate32 = 0b0101,

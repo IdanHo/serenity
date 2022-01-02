@@ -772,6 +772,41 @@ DescriptorTablePointer const& Processor::get_gdtr()
     return m_gdtr;
 }
 
+void Processor::write_gdt_ldt_entry(VirtualAddress address, size_t size)
+{
+    VERIFY((address.get() & 0xFFFFFFFFULL) == address.get());
+    Descriptor ldt_descriptor {};
+    ldt_descriptor.set_base(VirtualAddress(address.get()));
+    ldt_descriptor.set_limit(size);
+    ldt_descriptor.dpl = 0;
+    ldt_descriptor.segment_present = 1;
+    ldt_descriptor.granularity = 0;
+    ldt_descriptor.operation_size64 = 0;
+    ldt_descriptor.operation_size32 = 0;
+    ldt_descriptor.descriptor_type = 0;
+    ldt_descriptor.type = Descriptor::SystemType::LDT;
+    write_gdt_entry(GDT_SELECTOR_LDT, ldt_descriptor);
+
+#if ARCH(X86_64)
+    Descriptor ldt_descriptor_part2 {};
+    ldt_descriptor_part2.low = address.get() >> 32;
+    write_gdt_entry(GDT_SELECTOR_LDT_PART2, ldt_descriptor_part2);
+#endif
+}
+
+void Processor::load_ldt(VirtualAddress address, size_t size)
+{
+    if (address.is_null() || size == 0) {
+        asm volatile("lldt %w0" ::"q"(0)
+                     : "memory");
+        return;
+    }
+
+    write_gdt_ldt_entry(address, size);
+    asm volatile("lldt %w0" ::"q"(GDT_SELECTOR_LDT)
+                 : "memory");
+}
+
 ErrorOr<Vector<FlatPtr, 32>> Processor::capture_stack_trace(Thread& thread, size_t max_frames)
 {
     FlatPtr frame_ptr = 0, ip = 0;
@@ -1514,6 +1549,8 @@ UNMAP_AFTER_INIT void Processor::gdt_init()
     write_gdt_entry(GDT_SELECTOR_TSS_PART2, tss_descriptor_part2);
 #endif
 
+    write_gdt_ldt_entry({}, 0);
+
     flush_gdt();
     load_task_register(GDT_SELECTOR_TSS);
 
@@ -1593,6 +1630,11 @@ extern "C" void enter_thread_context(Thread* from_thread, Thread* to_thread)
     } else {
         asm volatile("fnsave %0"
                      : "=m"(from_thread->fpu_state()));
+    }
+
+    if (&from_thread->process() != &to_thread->process()) {
+        auto const& new_ldt = to_thread->process().ldt();
+        Processor::current().load_ldt(new_ldt.address(), new_ldt.size());
     }
 
 #if ARCH(I386)

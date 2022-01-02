@@ -531,6 +531,22 @@ public:
     ErrorOr<void> validate_mmap_prot(int prot, bool map_stack, bool map_anonymous, Memory::Region const* region = nullptr) const;
     ErrorOr<void> validate_inode_mmap_prot(int prot, Inode const& inode, bool map_shared) const;
 
+    struct LDT {
+        OwnPtr<Memory::Region> region;
+        size_t length { 0 };
+
+        VirtualAddress address() const
+        {
+            return region ? region->vaddr() : VirtualAddress {};
+        }
+        size_t size() const
+        {
+            return length * sizeof(Descriptor);
+        }
+    };
+
+    LDT& ldt() const { return *m_ldt.load(AK::memory_order_relaxed); }
+
 private:
     friend class MemoryManager;
     friend class Scheduler;
@@ -540,7 +556,7 @@ private:
     bool add_thread(Thread&);
     bool remove_thread(Thread&);
 
-    Process(NonnullOwnPtr<KString> name, UserID, GroupID, ProcessID ppid, bool is_kernel_process, RefPtr<Custody> current_directory, RefPtr<Custody> executable, TTY* tty, UnveilNode unveil_tree);
+    Process(NonnullOwnPtr<KString> name, UserID, GroupID, ProcessID ppid, bool is_kernel_process, RefPtr<Custody> current_directory, RefPtr<Custody> executable, TTY* tty, LDT* ldt, UnveilNode unveil_tree);
     static ErrorOr<NonnullRefPtr<Process>> try_create(RefPtr<Thread>& first_thread, NonnullOwnPtr<KString> name, UserID, GroupID, ProcessID ppid, bool is_kernel_process, RefPtr<Custody> current_directory = nullptr, RefPtr<Custody> executable = nullptr, TTY* = nullptr, Process* fork_parent = nullptr);
     ErrorOr<void> attach_resources(NonnullOwnPtr<Memory::AddressSpace>&&, RefPtr<Thread>& first_thread, Process* fork_parent);
     static ProcessID allocate_pid();
@@ -577,6 +593,9 @@ private:
     ErrorOr<void> remap_range_as_stack(FlatPtr address, size_t size);
 
     ErrorOr<FlatPtr> read_impl(int fd, Userspace<u8*> buffer, size_t size);
+
+    ErrorOr<void> set_ldt_entry(u16 index, Descriptor&);
+    ErrorOr<LDT*> clone_ldt();
 
 public:
     NonnullRefPtr<ProcessProcFSTraits> procfs_traits() const { return *m_procfs_traits; }
@@ -818,6 +837,9 @@ private:
     WeakPtr<Memory::Region> m_master_tls_region;
     size_t m_master_tls_size { 0 };
     size_t m_master_tls_alignment { 0 };
+
+    Atomic<LDT*> m_ldt;
+    Mutex m_ldt_lock { "LDT" };
 
     Mutex m_big_lock { "Process", Mutex::MutexBehavior::BigLock };
     Mutex m_ptrace_lock { "ptrace" };

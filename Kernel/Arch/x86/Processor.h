@@ -117,6 +117,8 @@ class Processor {
     void write_gdt_entry(u16 selector, Descriptor& descriptor);
     static ProcessorContainer& processors();
 
+    void write_gdt_ldt_entry(VirtualAddress, size_t size);
+
     static void smp_return_to_pool(ProcessorMessage& msg);
     static ProcessorMessage& smp_get_from_pool();
     static void smp_cleanup_message(ProcessorMessage& msg);
@@ -193,6 +195,8 @@ public:
     Descriptor& get_gdt_entry(u16 selector);
     void flush_gdt();
     DescriptorTablePointer const& get_gdtr();
+
+    void load_ldt(VirtualAddress, size_t size);
 
     template<IteratorFunction<Processor&> Callback>
     static inline IterationDecision for_each(Callback callback)

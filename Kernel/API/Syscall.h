@@ -101,6 +101,7 @@ enum class NeedsBigProcessLock {
     S(getsockopt, NeedsBigProcessLock::No)                  \
     S(gettid, NeedsBigProcessLock::No)                      \
     S(getuid, NeedsBigProcessLock::Yes)                     \
+    S(i386_set_ldt, NeedsBigProcessLock::Yes)               \
     S(inode_watcher_add_watch, NeedsBigProcessLock::Yes)    \
     S(inode_watcher_remove_watch, NeedsBigProcessLock::Yes) \
     S(ioctl, NeedsBigProcessLock::Yes)                      \
@@ -471,6 +472,16 @@ struct SC_chmod_params {
     StringArgument path;
     u16 mode;
     int follow_symlinks;
+};
+
+struct SC_i386_set_ldt_params {
+    u16 index;
+    u32 base;
+    u32 limit;
+    u8 type;
+    u8 present;
+    u8 operation_size_32bit;
+    u8 granularity;
 };
 
 void initialize();

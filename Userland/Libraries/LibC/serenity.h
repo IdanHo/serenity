@@ -71,4 +71,6 @@ int emuctl(uintptr_t command, uintptr_t arg0, uintptr_t arg1);
 
 int serenity_open(char const* path, size_t path_length, int options, ...);
 
+int i386_set_ldt(unsigned int index, unsigned int base, unsigned int limit, unsigned char type, unsigned char present, unsigned char operation_size_32bit, unsigned char granularity);
+
 __END_DECLS

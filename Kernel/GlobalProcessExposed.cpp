@@ -350,6 +350,26 @@ private:
     mutable Mutex m_lock;
 };
 
+extern Atomic<bool> g_user_ldt_control;
+class ProcFSUserLDTControl : public ProcFSSystemBoolean {
+public:
+    static NonnullRefPtr<ProcFSUserLDTControl> must_create(ProcFSSystemDirectory const&);
+    virtual bool value() const override
+    {
+        MutexLocker locker(m_lock);
+        return g_user_ldt_control.load();
+    }
+    virtual void set_value(bool new_value) override
+    {
+        MutexLocker locker(m_lock);
+        g_user_ldt_control.exchange(new_value);
+    }
+
+private:
+    ProcFSUserLDTControl();
+    mutable Mutex m_lock;
+};
+
 UNMAP_AFTER_INIT NonnullRefPtr<ProcFSDumpKmallocStacks> ProcFSDumpKmallocStacks::must_create(ProcFSSystemDirectory const&)
 {
     return adopt_ref_if_nonnull(new (nothrow) ProcFSDumpKmallocStacks).release_nonnull();
@@ -361,6 +381,10 @@ UNMAP_AFTER_INIT NonnullRefPtr<ProcFSUBSanDeadly> ProcFSUBSanDeadly::must_create
 UNMAP_AFTER_INIT NonnullRefPtr<ProcFSCapsLockRemap> ProcFSCapsLockRemap::must_create(ProcFSSystemDirectory const&)
 {
     return adopt_ref_if_nonnull(new (nothrow) ProcFSCapsLockRemap).release_nonnull();
+}
+UNMAP_AFTER_INIT NonnullRefPtr<ProcFSUserLDTControl> ProcFSUserLDTControl::must_create(ProcFSSystemDirectory const&)
+{
+    return adopt_ref_if_nonnull(new (nothrow) ProcFSUserLDTControl).release_nonnull();
 }
 
 UNMAP_AFTER_INIT ProcFSDumpKmallocStacks::ProcFSDumpKmallocStacks()
@@ -375,6 +399,11 @@ UNMAP_AFTER_INIT ProcFSUBSanDeadly::ProcFSUBSanDeadly()
 
 UNMAP_AFTER_INIT ProcFSCapsLockRemap::ProcFSCapsLockRemap()
     : ProcFSSystemBoolean("caps_lock_to_ctrl"sv)
+{
+}
+
+UNMAP_AFTER_INIT ProcFSUserLDTControl::ProcFSUserLDTControl()
+    : ProcFSSystemBoolean("user_ldt_control"sv)
 {
 }
 
@@ -1008,6 +1037,7 @@ UNMAP_AFTER_INIT NonnullRefPtr<ProcFSSystemDirectory> ProcFSSystemDirectory::mus
     directory->m_components.append(ProcFSDumpKmallocStacks::must_create(directory));
     directory->m_components.append(ProcFSUBSanDeadly::must_create(directory));
     directory->m_components.append(ProcFSCapsLockRemap::must_create(directory));
+    directory->m_components.append(ProcFSUserLDTControl::must_create(directory));
     return directory;
 }
 

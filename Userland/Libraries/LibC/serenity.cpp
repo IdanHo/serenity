@@ -173,4 +173,19 @@ int serenity_open(char const* path, size_t path_length, int options, ...)
 
     __RETURN_WITH_ERRNO(rc, rc, -1);
 }
+
+int i386_set_ldt(unsigned int index, unsigned int base, unsigned int limit, unsigned char type, unsigned char present, unsigned char operation_size_32bit, unsigned char granularity)
+{
+    Syscall::SC_i386_set_ldt_params params {
+        (u16)index,
+        base,
+        limit,
+        type,
+        present,
+        operation_size_32bit,
+        granularity
+    };
+    int rc = syscall(SC_i386_set_ldt, &params);
+    __RETURN_WITH_ERRNO(rc, rc, -1);
+}
 }

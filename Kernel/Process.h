@@ -416,6 +416,7 @@ public:
     ErrorOr<FlatPtr> sys$statvfs(Userspace<Syscall::SC_statvfs_params const*> user_params);
     ErrorOr<FlatPtr> sys$fstatvfs(int fd, statvfs* buf);
     ErrorOr<FlatPtr> sys$map_time_page();
+    ErrorOr<FlatPtr> sys$i386_set_ldt(Userspace<Syscall::SC_i386_set_ldt_params const*>);
 
     template<bool sockname, typename Params>
     ErrorOr<void> get_sock_or_peer_name(Params const&);

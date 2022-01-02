@@ -251,6 +251,7 @@ set(KERNEL_SOURCES
     Syscalls/getrandom.cpp
     Syscalls/getuid.cpp
     Syscalls/hostname.cpp
+    Syscalls/i386.cpp
     Syscalls/ioctl.cpp
     Syscalls/keymap.cpp
     Syscalls/kill.cpp

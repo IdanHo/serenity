@@ -1,0 +1,12 @@
+diff -Naur natalie-6205c559e0a826daf9fa7fecc43ecfbae3ba056d/Rakefile natalie-6205c559e0a826daf9fa7fecc43ecfbae3ba056d-serenity/Rakefile
+--- natalie-6205c559e0a826daf9fa7fecc43ecfbae3ba056d/Rakefile	2022-01-10 15:15:58.000000000 +0200
++++ natalie-6205c559e0a826daf9fa7fecc43ecfbae3ba056d-serenity/Rakefile	2022-01-10 23:51:54.504501128 +0200
+@@ -189,7 +189,7 @@
+   sh <<-SH
+     cd #{build_dir} && \
+     sh autogen.sh && \
+-    ./configure --with-pic --prefix #{build_dir} && \
++    ./configure --host="${SERENITY_ARCH}-pc-serenity" --with-pic --prefix #{build_dir} && \
+     make -j 4 && \
+     make install
+   SH

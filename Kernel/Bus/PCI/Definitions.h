@@ -91,6 +91,8 @@ static constexpr u16 msix_control_table_mask = 0x07ff;
 static constexpr u8 msix_table_bir_mask = 0x7;
 static constexpr u16 msix_table_offset_mask = 0xfff8;
 static constexpr u16 msix_control_enable = 0x8000;
+static constexpr u16 pcie_link_control_offset = 0x10;
+static constexpr u32 pcie_link_control_clock_request = 0x100;
 
 // Taken from https://pcisig.com/sites/default/files/files/PCI_Code-ID_r_1_11__v24_Jan_2019.pdf
 enum class ClassID {
@@ -227,6 +229,7 @@ enum ID {
     Null = 0x0,
     MSI = 0x5,
     VendorSpecific = 0x9,
+    PCIE = 0x10,
     MSIX = 0x11,
 };
 }

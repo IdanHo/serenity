@@ -37,6 +37,8 @@ namespace Kernel {
 #define REG_CSI_DATA 0x64
 #define REG_CSI_ADDR 0x68
 #define REG_PHYSTATUS 0x6C
+#define REG_MACDBG 0x6D
+#define REG_GPIO 0x6E
 #define REG_PMCH 0x6F
 #define REG_ERI_DATA 0x70
 #define REG_ERI_ADDR 0x74
@@ -45,6 +47,7 @@ namespace Kernel {
 #define REG_OCP_ADDR 0xB4
 #define REG_GPHY_OCP 0xB8
 #define REG_DLLPR 0xD0
+#define REG_DBG 0xD1
 #define REG_MCU 0xD3
 #define REG_RMS 0xDA
 #define REG_CPLUS_COMMAND 0xE0
@@ -102,6 +105,8 @@ namespace Kernel {
 #define RXCFG_FTH_NONE 0xE000
 #define RXCFG_MULTI_ENABLE 0x4000
 #define RXCFG_128INT_ENABLE 0x8000
+
+#define CFG1_SPEED_DOWN 0x10
 
 #define CFG2_CLOCK_REQUEST_ENABLE 0x80
 
@@ -179,6 +184,11 @@ namespace Kernel {
 #define PHYSTATUS_100M 0x08
 #define PHYSTATUS_10M 0x04
 
+#define GPIO_ENABLE 0x1
+
+#define DEBUG_FIX_NAK_2 0x8
+#define DEBUG_FIX_NAK_1 0x10
+
 #define TX_BUFFER_SIZE 0x1FF8
 #define RX_BUFFER_SIZE 0x1FF8 // FIXME: this should be increased (0x3FFF)
 
@@ -205,10 +215,10 @@ bool RTL8168NetworkAdapter::determine_supported_version() const
     case ChipVersion::Version1:
     case ChipVersion::Version2:
     case ChipVersion::Version3:
-        return true;
     case ChipVersion::Version4:
     case ChipVersion::Version5:
     case ChipVersion::Version6:
+        return true;
     case ChipVersion::Version7:
     case ChipVersion::Version8:
     case ChipVersion::Version9:
@@ -374,6 +384,14 @@ void RTL8168NetworkAdapter::startup()
     out16(REG_CPLUS_COMMAND, cplus_command);
     in16(REG_CPLUS_COMMAND); // C+ Command barrier
 
+    // take controller out of sleep mode
+    if (m_version == ChipVersion::Version5 || m_version == ChipVersion::Version6) {
+        if (in8(REG_MACDBG) & 0x80)
+            out8(REG_GPIO, in8(REG_GPIO) | GPIO_ENABLE);
+        else
+            out8(REG_GPIO, in8(REG_GPIO) & ~GPIO_ENABLE);
+    }
+
     // power up phy
     if (m_version >= ChipVersion::Version9 && m_version <= ChipVersion::Version15) {
         out8(REG_PMCH, in8(REG_PMCH) | 0x80);
@@ -418,12 +436,18 @@ void RTL8168NetworkAdapter::configure_phy()
         configure_phy_b_2();
         return;
     }
-    case ChipVersion::Version4:
-        TODO();
-    case ChipVersion::Version5:
-        TODO();
-    case ChipVersion::Version6:
-        TODO();
+    case ChipVersion::Version4: {
+        configure_phy_c_1();
+        return;
+    }
+    case ChipVersion::Version5: {
+        configure_phy_c_2();
+        return;
+    }
+    case ChipVersion::Version6: {
+        configure_phy_c_3();
+        return;
+    }
     case ChipVersion::Version7:
         TODO();
     case ChipVersion::Version8:
@@ -507,6 +531,82 @@ void RTL8168NetworkAdapter::configure_phy_b_2()
     };
 
     phy_out_batch(phy_registers, 3);
+}
+
+void RTL8168NetworkAdapter::configure_phy_c_1()
+{
+    constexpr PhyRegister phy_registers[] = {
+        { 0x1f, 0x1 },
+        { 0x12, 0x2300 },
+        { 0x1f, 0x2 },
+        { 0x0, 0x88d4 },
+        { 0x1, 0x82b1 },
+        { 0x3, 0x7002 },
+        { 0x8, 0x9e30 },
+        { 0x9, 0x1f0 },
+        { 0xa, 0x5500 },
+        { 0xc, 0xc8 },
+        { 0x1f, 0x3 },
+        { 0x12, 0xc096 },
+        { 0x16, 0xa },
+        { 0x1f, 0 },
+        { 0x1f, 0 },
+        { 0x9, 0x2000 },
+        { 0x9, 0 },
+    };
+
+    phy_out_batch(phy_registers, 17);
+
+    phy_update(0x14, 1 << 5, 0);
+    phy_update(0x0d, 1 << 5, 0);
+}
+
+void RTL8168NetworkAdapter::configure_phy_c_2()
+{
+    constexpr PhyRegister phy_registers[] = {
+        { 0x1f, 0x1 },
+        { 0x12, 0x2300 },
+        { 0x3, 0x802f },
+        { 0x2, 0x4f02 },
+        { 0x1, 0x409 },
+        { 0x0, 0xf099 },
+        { 0x4, 0x9800 },
+        { 0x4, 0x9000 },
+        { 0x1d, 0x3d98 },
+        { 0x1f, 0x2 },
+        { 0xc, 0x7eb8 },
+        { 0x6, 0x761 },
+        { 0x1f, 0x3 },
+        { 0x16, 0xf0a },
+        { 0x1f, 0 },
+    };
+
+    phy_out_batch(phy_registers, 15);
+
+    phy_update(0x16, 1 << 0, 0);
+    phy_update(0x14, 1 << 5, 0);
+    phy_update(0x0d, 1 << 5, 0);
+}
+
+void RTL8168NetworkAdapter::configure_phy_c_3()
+{
+    constexpr PhyRegister phy_registers[] = {
+        { 0x1f, 0x1 },
+        { 0x12, 0x2300 },
+        { 0x1d, 0x3d98 },
+        { 0x1f, 0x2 },
+        { 0xc, 0x7eb8 },
+        { 0x6, 0x5461 },
+        { 0x1f, 0x3 },
+        { 0x16, 0xf0a },
+        { 0x1f, 0 },
+    };
+
+    phy_out_batch(phy_registers, 9);
+
+    phy_update(0x16, 1 << 0, 0);
+    phy_update(0x14, 1 << 5, 0);
+    phy_update(0x0d, 1 << 5, 0);
 }
 
 void RTL8168NetworkAdapter::configure_phy_e_2()
@@ -853,11 +953,14 @@ void RTL8168NetworkAdapter::hardware_quirks()
         hardware_quirks_b_2();
         return;
     case ChipVersion::Version4:
-        TODO();
+        hardware_quirks_c_1();
+        return;
     case ChipVersion::Version5:
-        TODO();
+        hardware_quirks_c_2();
+        return;
     case ChipVersion::Version6:
-        TODO();
+        hardware_quirks_c_3();
+        return;
     case ChipVersion::Version7:
         TODO();
     case ChipVersion::Version8:
@@ -929,6 +1032,60 @@ void RTL8168NetworkAdapter::hardware_quirks_b_2()
 
     // disable checked reserved bits
     out8(REG_CONFIG4, in8(REG_CONFIG4) & ~1);
+}
+
+void RTL8168NetworkAdapter::disable_pcie_clock_request()
+{
+    for (auto& capability : device_identifier().capabilities()) {
+        if (capability.id() != PCI::Capabilities::ID::PCIE)
+            continue;
+        capability.write32(PCI::pcie_link_control_offset, capability.read32(PCI::pcie_link_control_offset) & ~PCI::pcie_link_control_clock_request);
+    }
+}
+
+void RTL8168NetworkAdapter::hardware_quirks_c_1()
+{
+    constexpr EPhyUpdate ephy_info[] = {
+        { 0x2, 0x800, 0x1000 },
+        { 0x3, 0, 0x0002 },
+        { 0x6, 0x080, 0 },
+    };
+
+    csi_enable(CSI_ACCESS_2);
+
+    // magic value?
+    out8(REG_DBG, 0x6 | DEBUG_FIX_NAK_1 | DEBUG_FIX_NAK_2);
+
+    extended_phy_initialize(ephy_info, 3);
+
+    out8(REG_CONFIG1, in8(REG_CONFIG1) | CFG1_SPEED_DOWN);
+    out8(REG_CONFIG3, in8(REG_CONFIG3) | CFG3_BEACON_ENABLE);
+    disable_pcie_clock_request();
+}
+
+void RTL8168NetworkAdapter::hardware_quirks_c_2()
+{
+    constexpr EPhyUpdate ephy_info[] = {
+        { 0x1, 0, 0x1 },
+        { 0x3, 0x400, 0x20 },
+    };
+
+    csi_enable(CSI_ACCESS_2);
+
+    extended_phy_initialize(ephy_info, 2);
+
+    out8(REG_CONFIG1, in8(REG_CONFIG1) | CFG1_SPEED_DOWN);
+    out8(REG_CONFIG3, in8(REG_CONFIG3) | CFG3_BEACON_ENABLE);
+    disable_pcie_clock_request();
+}
+
+void RTL8168NetworkAdapter::hardware_quirks_c_3()
+{
+    csi_enable(CSI_ACCESS_2);
+
+    out8(REG_CONFIG1, in8(REG_CONFIG1) | CFG1_SPEED_DOWN);
+    out8(REG_CONFIG3, in8(REG_CONFIG3) | CFG3_BEACON_ENABLE);
+    disable_pcie_clock_request();
 }
 
 void RTL8168NetworkAdapter::hardware_quirks_e_2()

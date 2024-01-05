@@ -136,15 +136,22 @@ private:
     void configure_phy();
     void configure_phy_b_1();
     void configure_phy_b_2();
+    void configure_phy_c_1();
+    void configure_phy_c_2();
+    void configure_phy_c_3();
     void configure_phy_e_2();
     void configure_phy_h_1();
     void configure_phy_h_2();
 
     void rar_exgmac_set();
+    void disable_pcie_clock_request();
 
     void hardware_quirks();
     void hardware_quirks_b_1();
     void hardware_quirks_b_2();
+    void hardware_quirks_c_1();
+    void hardware_quirks_c_2();
+    void hardware_quirks_c_3();
     void hardware_quirks_e_2();
     void hardware_quirks_h();
 

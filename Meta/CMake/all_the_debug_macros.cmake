@@ -261,3 +261,7 @@ set(XML_PARSER_DEBUG ON)
 # set(IA32_DEBUG_INTERFACE ON)
 # False positive: ANDROID_LOG_DEBUG is a log level, not a debug flag
 # set(ANDROID_LOG_DEBUG ON)
+# False positive: DEBUG_FIX_NAK_2 is the name of a register field, not a debug flag.
+# set(DEBUG_FIX_NAK_2 ON)
+# False positive: DEBUG_FIX_NAK_1 is the name of a register field, not a debug flag.
+# set(DEBUG_FIX_NAK_1 ON)

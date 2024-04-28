@@ -311,4 +311,9 @@ DeviceIdentifier const& get_device_identifier(Address address)
     return Access::the().get_device_identifier(address);
 }
 
+FlatPtr get_io_mapping_offset()
+{
+    return Access::the().io_mapping_offset();
+}
+
 }

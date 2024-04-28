@@ -54,6 +54,9 @@ void initialize()
     [[maybe_unused]] auto soc_size_cells = soc.get_property("#size-cells"sv).value().as<u32>();
 
     Optional<u32> domain_counter;
+    FlatPtr pci_io_base = 0;
+    FlatPtr pci_io_mapped_base = 0;
+    u32 pci_io_size = 0;
     FlatPtr pci_32bit_mmio_base = 0;
     u32 pci_32bit_mmio_size = 0;
     FlatPtr pci_64bit_mmio_base = 0;
@@ -165,34 +168,42 @@ void initialize()
             while (!stream.is_eof()) {
                 u32 pci_address_metadata = MUST(stream.read_value<BigEndian<u32>>());
                 FlatPtr pci_address = MUST(stream.read_value<BigEndian<u64>>());
-                FlatPtr mmio_address;
+                FlatPtr cpu_address;
                 if (soc_address_cells == 1)
-                    mmio_address = MUST(stream.read_value<BigEndian<u32>>());
+                    cpu_address = MUST(stream.read_value<BigEndian<u32>>());
                 else
-                    mmio_address = MUST(stream.read_value<BigEndian<u64>>());
-                u64 mmio_size;
+                    cpu_address = MUST(stream.read_value<BigEndian<u64>>());
+                u64 size;
                 if (size_cells == 1)
-                    mmio_size = MUST(stream.read_value<BigEndian<u32>>());
+                    size = MUST(stream.read_value<BigEndian<u32>>());
                 else
-                    mmio_size = MUST(stream.read_value<BigEndian<u64>>());
+                    size = MUST(stream.read_value<BigEndian<u64>>());
                 auto space_type = (pci_address_metadata >> OpenFirmwareAddress::space_type_offset) & OpenFirmwareAddress::space_type_mask;
+                if (space_type == OpenFirmwareAddress::SpaceType::IOSpace) {
+                    if (pci_io_size >= size)
+                        continue; // We currently only use the single largest region - TODO: Use all available regions if needed
+                    pci_io_base = pci_address;
+                    pci_io_mapped_base = cpu_address;
+                    pci_io_size = size;
+                    continue;
+                }
                 if (space_type != OpenFirmwareAddress::SpaceType::Memory32BitSpace && space_type != OpenFirmwareAddress::SpaceType::Memory64BitSpace)
-                    continue; // We currently only support memory-mapped PCI on RISC-V
+                    continue;
                 // TODO: Support mapped PCI addresses
-                VERIFY(pci_address == mmio_address);
+                VERIFY(pci_address == cpu_address);
                 if (space_type == OpenFirmwareAddress::SpaceType::Memory32BitSpace) {
                     auto prefetchable = (pci_address_metadata >> OpenFirmwareAddress::prefetchable_offset) & OpenFirmwareAddress::prefetchable_mask;
                     if (prefetchable)
                         continue; // We currently only use non-prefetchable 32-bit regions, since 64-bit regions are always prefetchable - TODO: Use 32-bit prefetchable regions if only they are available
-                    if (pci_32bit_mmio_size >= mmio_size)
+                    if (pci_32bit_mmio_size >= size)
                         continue; // We currently only use the single largest region - TODO: Use all available regions if needed
-                    pci_32bit_mmio_base = mmio_address;
-                    pci_32bit_mmio_size = mmio_size;
+                    pci_32bit_mmio_base = cpu_address;
+                    pci_32bit_mmio_size = size;
                 } else {
-                    if (pci_64bit_mmio_size >= mmio_size)
+                    if (pci_64bit_mmio_size >= size)
                         continue; // We currently only use the single largest region - TODO: Use all available regions if needed
-                    pci_64bit_mmio_base = mmio_address;
-                    pci_64bit_mmio_size = mmio_size;
+                    pci_64bit_mmio_base = cpu_address;
+                    pci_64bit_mmio_size = size;
                 }
             }
         }
@@ -227,8 +238,11 @@ void initialize()
         }
     }
 
-    if (pci_32bit_mmio_size != 0 || pci_64bit_mmio_size != 0) {
+    if (pci_io_size != 0 || pci_32bit_mmio_size != 0 || pci_64bit_mmio_size != 0) {
         PCIConfiguration config {
+            pci_io_base,
+            pci_io_base + pci_io_size,
+            pci_io_mapped_base - pci_io_base,
             pci_32bit_mmio_base,
             pci_32bit_mmio_base + pci_32bit_mmio_size,
             pci_64bit_mmio_base,

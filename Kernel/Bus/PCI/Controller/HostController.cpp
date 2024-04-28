@@ -181,8 +181,25 @@ void HostController::configure_attached_devices(PCIConfiguration& config)
             auto bar_value = read32_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), bar_offset);
             auto bar_space_type = get_BAR_space_type(bar_value);
             auto bar_prefetchable = (bar_value >> 3) & 1;
+            if (bar_space_type == BARSpaceType::IOSpace) {
+                write32_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), bar_offset, 0xFFFFFFFF);
+                auto bar_size = read32_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), bar_offset);
+                write32_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), bar_offset, bar_value);
+                bar_size &= bar_io_mask;
+                bar_size = (~bar_size) + 1;
+                if (bar_size == 0)
+                    continue;
+                auto io_address = align_up_to(config.io_base, bar_size);
+                if (io_address + bar_size <= config.io_end) {
+                    write32_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), bar_offset, io_address);
+                    config.io_base = io_address + bar_size;
+                    continue;
+                }
+                dmesgln("PCI: Ran out of I/O address space");
+                VERIFY_NOT_REACHED();
+            }
             if (bar_space_type != BARSpaceType::Memory32BitSpace && bar_space_type != BARSpaceType::Memory64BitSpace)
-                continue; // We only support memory-mapped BAR configuration at the moment
+                continue; // We only support 32/64 bit memory-mapped BAR configuration at the moment
             if (bar_space_type == BARSpaceType::Memory32BitSpace) {
                 write32_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), bar_offset, 0xFFFFFFFF);
                 auto bar_size = read32_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), bar_offset);
@@ -239,8 +256,9 @@ void HostController::configure_attached_devices(PCIConfiguration& config)
             dmesgln("PCI: Ran out of 64-bit MMIO address space");
             VERIFY_NOT_REACHED();
         }
-        // enable memory space
+        // enable memory & I/O space
         auto command_value = read16_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), PCI::RegisterOffset::COMMAND);
+        command_value |= 1 << 0; // I/O space enable
         command_value |= 1 << 1; // memory space enable
         write16_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), PCI::RegisterOffset::COMMAND, command_value);
         // assign interrupt number
@@ -255,15 +273,21 @@ void HostController::configure_attached_devices(PCIConfiguration& config)
         if (read8_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), PCI::RegisterOffset::SUBCLASS) != PCI::Bridge::SubclassID::PCI_TO_PCI)
             return;
         // bridge-specific handling
+        config.io_base = align_up_to(config.io_base, 4 * KiB);
         config.mmio_32bit_base = align_up_to(config.mmio_32bit_base, MiB);
         config.mmio_64bit_base = align_up_to(config.mmio_64bit_base, MiB);
+        write8_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), PCI::RegisterOffset::IO_BASE, config.io_base >> 8);
+        write16_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), PCI::RegisterOffset::IO_BASE_UPPER_16_BITS, config.io_base >> 16);
         write32_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), PCI::RegisterOffset::MEMORY_BASE, config.mmio_32bit_base >> 16);
         write32_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), PCI::RegisterOffset::PREFETCHABLE_MEMORY_BASE, config.mmio_64bit_base >> 16);
         write32_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), PCI::RegisterOffset::PREFETCHABLE_MEMORY_BASE_UPPER_32_BITS, config.mmio_64bit_base >> 32); },
         [this, &config](EnumerableDeviceIdentifier const& device_identifier) {
             // called after a bridge was recursively enumerated
+            config.io_base = align_up_to(config.io_base, 4 * KiB);
             config.mmio_32bit_base = align_up_to(config.mmio_32bit_base, MiB);
             config.mmio_64bit_base = align_up_to(config.mmio_64bit_base, MiB);
+            write8_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), PCI::RegisterOffset::IO_LIMIT, config.io_base >> 8);
+            write16_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), PCI::RegisterOffset::IO_LIMIT_UPPER_16_BITS, config.io_base >> 16);
             write32_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), PCI::RegisterOffset::MEMORY_LIMIT, config.mmio_32bit_base >> 16);
             write32_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), PCI::RegisterOffset::PREFETCHABLE_MEMORY_LIMIT, config.mmio_64bit_base >> 16);
             write32_field(device_identifier.address().bus(), device_identifier.address().device(), device_identifier.address().function(), PCI::RegisterOffset::PREFETCHABLE_MEMORY_LIMIT_UPPER_32_BITS, config.mmio_64bit_base >> 32);

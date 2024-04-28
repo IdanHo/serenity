@@ -18,8 +18,14 @@ inline ErrorOr<PhysicalAddress> get_bar_address(DeviceIdentifier const& device, 
     u64 pci_bar_value = get_BAR(device, bar);
     auto pci_bar_space_type = get_BAR_space_type(pci_bar_value);
 
-    if (pci_bar_space_type == BARSpaceType::IOSpace)
+    if (pci_bar_space_type == BARSpaceType::IOSpace) {
+#if ARCH(RISCV64)
+        // I/O space is remapped to MMIO space on RISC-V
+        return PhysicalAddress { (pci_bar_value & bar_io_mask) + get_io_mapping_offset() };
+#else
         return EIO;
+#endif
+    }
 
     if (pci_bar_space_type == BARSpaceType::Memory64BitSpace) {
         // FIXME: In theory, BAR5 cannot be assigned to 64 bit as it is the last one...
@@ -43,8 +49,13 @@ inline ErrorOr<Memory::TypedMapping<T>> map_bar(DeviceIdentifier const& device, 
     u64 pci_bar_value = get_BAR(device, bar);
     auto pci_bar_space_type = get_BAR_space_type(pci_bar_value);
 
-    if (pci_bar_space_type == PCI::BARSpaceType::IOSpace)
+    if (pci_bar_space_type == PCI::BARSpaceType::IOSpace) {
+#if ARCH(RISCV64)
+        pci_bar_space_type = PCI::BARSpaceType::Memory32BitSpace; // I/O space is effectively 32-bit MMIO space on RISC-V
+#else
         return EIO;
+#endif
+    }
 
     auto bar_address = TRY(get_bar_address(device, bar));
 

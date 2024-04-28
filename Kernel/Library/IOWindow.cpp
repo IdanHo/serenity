@@ -84,8 +84,10 @@ ErrorOr<NonnullOwnPtr<IOWindow>> IOWindow::create_for_pci_device_bar(PCI::Device
             return Error::from_errno(EOVERFLOW);
         auto io_address_range = TRY(adopt_nonnull_own_or_enomem(new (nothrow) IOAddressData((pci_bar_value & 0xfffffffc), space_length)));
         return TRY(adopt_nonnull_own_or_enomem(new (nothrow) IOWindow(move(io_address_range))));
+#elif ARCH(RISCV64)
+        // In RISC-V I/O ports are simply mapped to a special MMIO range
 #else
-        // Note: For non-x86 platforms, IO PCI BARs are simply not useable.
+        dmesgln("I/O PCI access not implemented for this architecture");
         return Error::from_errno(ENOTSUP);
 #endif
     }

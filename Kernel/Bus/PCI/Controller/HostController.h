@@ -19,6 +19,9 @@ AK_TYPEDEF_DISTINCT_ORDERED_ID(u8, DeviceNumber);
 AK_TYPEDEF_DISTINCT_ORDERED_ID(u8, FunctionNumber);
 
 struct PCIConfiguration {
+    FlatPtr io_base { 0 };
+    FlatPtr io_end { 0 };
+    FlatPtr io_mapping_offset { 0 };
     FlatPtr mmio_32bit_base { 0 };
     FlatPtr mmio_32bit_end { 0 };
     FlatPtr mmio_64bit_base { 0 };

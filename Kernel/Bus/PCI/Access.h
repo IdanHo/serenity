@@ -51,6 +51,8 @@ public:
 
     ErrorOr<void> add_host_controller_and_scan_for_devices(NonnullOwnPtr<HostController>);
 
+    FlatPtr io_mapping_offset() const { return m_io_mapping_offset; }
+
 private:
     friend void PCI::initialize();
 
@@ -66,5 +68,6 @@ private:
 
     HashMap<u32, NonnullOwnPtr<PCI::HostController>> m_host_controllers;
     Vector<NonnullRefPtr<DeviceIdentifier>> m_device_identifiers;
+    FlatPtr m_io_mapping_offset { 0 };
 };
 }

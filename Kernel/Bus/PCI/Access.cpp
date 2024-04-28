@@ -158,6 +158,7 @@ UNMAP_AFTER_INIT void Access::configure_pci_space(PCIConfiguration& config)
 {
     SpinlockLocker locker(m_access_lock);
     SpinlockLocker scan_locker(m_scan_lock);
+    m_io_mapping_offset = config.io_mapping_offset;
     for (auto& [_, host_controller] : m_host_controllers)
         host_controller->configure_attached_devices(config);
 }

@@ -78,6 +78,7 @@ ErrorOr<void> UHCIController::initialize()
     dmesgln_pci(*this, "Controller found {} @ {}", PCI::get_hardware_id(device_identifier()), device_identifier().address());
     dmesgln_pci(*this, "I/O base {}", m_registers_io_window);
     dmesgln_pci(*this, "Interrupt line: {}", interrupt_number());
+    PCI::enable_bus_mastering(device_identifier());
 
     TRY(spawn_async_poll_process());
     TRY(spawn_port_process());

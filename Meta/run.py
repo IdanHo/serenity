@@ -724,6 +724,13 @@ def set_up_machine_devices(config: Configuration):
         config.extra_arguments.extend(["-serial", "stdio"])
         config.kernel_cmdline.extend(["serial_debug", "nvme_poll"])
         config.qemu_cpu = None
+        config.enable_usb = True
+        config.add_devices(
+            [
+                "ich9-usb-uhci1",
+                "usb-mouse",
+            ]
+        )
         return
 
     # Machine specific base setups
